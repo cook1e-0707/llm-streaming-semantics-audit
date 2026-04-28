@@ -71,6 +71,13 @@ Out of scope for the initial phase:
 ```text
 llm-streaming-semantics-audit/
 |-- docs/
+|   |-- source_notes/
+|   |   |-- anthropic.md
+|   |   |-- aws_bedrock.md
+|   |   |-- azure_openai.md
+|   |   |-- google_vertex_gemini.md
+|   |   |-- openai_guardrails.md
+|   |   `-- README.md
 |   |-- experiment_scope.md
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
@@ -79,7 +86,8 @@ llm-streaming-semantics-audit/
 |   |-- research_charter.md
 |   `-- semantics_taxonomy.md
 |-- scripts/
-|   `-- update_readme_status.py
+|   |-- update_readme_status.py
+|   `-- validate_provider_matrix.py
 |-- src/
 |   `-- lssa/
 |       |-- schema/
@@ -92,6 +100,7 @@ llm-streaming-semantics-audit/
 |       `-- __init__.py
 |-- tests/
 |   |-- test_event_schema.py
+|   |-- test_provider_matrix.py
 |   `-- test_readme_status.py
 |-- .env.example
 |-- .gitignore

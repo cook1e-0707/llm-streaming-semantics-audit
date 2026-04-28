@@ -7,7 +7,9 @@ from scripts.update_readme_status import (
     PROJECT_TREE_START,
     generate_metrics_registry,
     generate_project_tree,
+    load_metrics_registry,
     parse_metrics_markdown,
+    parse_metrics_registry_yaml,
     replace_section,
     update_readme_text,
 )
@@ -36,6 +38,37 @@ def test_parse_metrics_markdown_extracts_registry_entries(tmp_path: Path) -> Non
     assert entries[0].definition == "elapsed milliseconds from request start."
 
 
+def test_parse_metrics_registry_yaml_extracts_full_entries(tmp_path: Path) -> None:
+    registry_path = tmp_path / "metrics_registry.yaml"
+    registry_path.write_text(
+        "\n".join(
+            [
+                "metrics:",
+                "  - name: TTFB_ms",
+                "    definition: elapsed milliseconds from request_start to first_byte",
+                "    required_events:",
+                "      - request_start",
+                "      - first_byte",
+                "    required_fields:",
+                "      - event_type",
+                "      - timestamp_ms",
+                "    applicable_layers:",
+                "      - provider",
+                "      - sdk",
+                "    status: implemented",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    entries = parse_metrics_registry_yaml(registry_path)
+
+    assert entries[0].name == "TTFB_ms"
+    assert entries[0].status == "implemented"
+    assert entries[0].required_events == ("request_start", "first_byte")
+    assert entries[0].applicable_layers == ("provider", "sdk")
+
+
 def test_generate_project_tree_skips_local_outputs(tmp_path: Path) -> None:
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "metrics.md").write_text("# Metrics\n", encoding="utf-8")
@@ -58,15 +91,22 @@ def test_generate_project_tree_skips_local_outputs(tmp_path: Path) -> None:
 def test_generate_metrics_registry_renders_table(tmp_path: Path) -> None:
     docs = tmp_path / "docs"
     docs.mkdir()
-    (docs / "metrics.md").write_text(
+    (docs / "metrics_registry.yaml").write_text(
         "\n".join(
             [
-                "# Metrics",
-                "",
-                "## TTFT_ms",
-                "",
-                "- Status: implemented",
-                "- Definition: elapsed milliseconds to first token.",
+                "metrics:",
+                "  - name: TTFT_ms",
+                "    definition: elapsed milliseconds to first token",
+                "    required_events:",
+                "      - request_start",
+                "      - first_token",
+                "    required_fields:",
+                "      - event_type",
+                "      - timestamp_ms",
+                "    applicable_layers:",
+                "      - provider",
+                "      - sdk",
+                "    status: implemented",
             ]
         ),
         encoding="utf-8",
@@ -74,12 +114,13 @@ def test_generate_metrics_registry_renders_table(tmp_path: Path) -> None:
 
     registry = generate_metrics_registry(tmp_path)
 
-    assert "| Metric | Status | Definition |" in registry
+    assert "| Metric | Status | Layers | Definition |" in registry
     assert "`TTFT_ms`" in registry
-    assert "elapsed milliseconds to first token." in registry
+    assert "`provider`, `sdk`" in registry
+    assert "elapsed milliseconds to first token" in registry
 
 
-def test_update_readme_text_replaces_generated_sections(tmp_path: Path) -> None:
+def test_load_metrics_registry_prefers_yaml(tmp_path: Path) -> None:
     docs = tmp_path / "docs"
     docs.mkdir()
     (docs / "metrics.md").write_text(
@@ -87,10 +128,53 @@ def test_update_readme_text_replaces_generated_sections(tmp_path: Path) -> None:
             [
                 "# Metrics",
                 "",
-                "## settlement_lag_ms",
+                "## markdown_metric",
                 "",
                 "- Status: implemented",
-                "- Definition: elapsed milliseconds to settlement.",
+                "- Definition: markdown fallback.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (docs / "metrics_registry.yaml").write_text(
+        "\n".join(
+            [
+                "metrics:",
+                "  - name: yaml_metric",
+                "    definition: yaml source",
+                "    required_events:",
+                "      - request_start",
+                "    required_fields:",
+                "      - event_type",
+                "    applicable_layers:",
+                "      - provider",
+                "    status: defined",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    entries = load_metrics_registry(tmp_path)
+
+    assert [entry.name for entry in entries] == ["yaml_metric"]
+
+
+def test_update_readme_text_replaces_generated_sections(tmp_path: Path) -> None:
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "metrics_registry.yaml").write_text(
+        "\n".join(
+            [
+                "metrics:",
+                "  - name: settlement_lag_ms",
+                "    definition: elapsed milliseconds to settlement",
+                "    required_events:",
+                "      - settled",
+                "    required_fields:",
+                "      - timestamp_ms",
+                "    applicable_layers:",
+                "      - provider",
+                "    status: implemented",
             ]
         ),
         encoding="utf-8",

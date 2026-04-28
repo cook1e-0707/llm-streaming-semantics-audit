@@ -34,6 +34,9 @@ class MetricEntry:
     name: str
     status: str
     definition: str
+    required_events: tuple[str, ...] = ()
+    required_fields: tuple[str, ...] = ()
+    applicable_layers: tuple[str, ...] = ()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -93,13 +96,69 @@ def generate_project_tree(root: Path) -> str:
 
 
 def generate_metrics_registry(root: Path) -> str:
-    entries = parse_metrics_markdown(root / "docs" / "metrics.md")
-    rows = ["| Metric | Status | Definition |", "| --- | --- | --- |"]
+    entries = load_metrics_registry(root)
+    rows = [
+        "| Metric | Status | Layers | Definition |",
+        "| --- | --- | --- | --- |",
+    ]
     for entry in entries:
+        layers = ", ".join(f"`{layer}`" for layer in entry.applicable_layers) or "unknown"
         rows.append(
-            f"| `{entry.name}` | {entry.status} | {entry.definition} |"
+            f"| `{entry.name}` | {entry.status} | {layers} | {entry.definition} |"
         )
     return "\n".join(rows)
+
+
+def load_metrics_registry(root: Path) -> list[MetricEntry]:
+    registry_path = root / "docs" / "metrics_registry.yaml"
+    if registry_path.exists():
+        return parse_metrics_registry_yaml(registry_path)
+    return parse_metrics_markdown(root / "docs" / "metrics.md")
+
+
+def parse_metrics_registry_yaml(path: Path) -> list[MetricEntry]:
+    """Parse the repository's constrained metrics registry YAML format."""
+
+    entries: list[dict[str, object]] = []
+    current: dict[str, object] | None = None
+    current_list_key: str | None = None
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        if raw_line == "metrics:":
+            continue
+        if raw_line.startswith("  - name: "):
+            if current is not None:
+                entries.append(current)
+            current = {"name": raw_line.split(": ", 1)[1].strip()}
+            current_list_key = None
+            continue
+        if current is None:
+            raise ValueError(f"Unexpected line before first metric: {raw_line}")
+        if raw_line.startswith("    ") and raw_line.strip().endswith(":"):
+            current_list_key = raw_line.strip()[:-1]
+            current[current_list_key] = []
+            continue
+        if raw_line.startswith("      - "):
+            if current_list_key is None:
+                raise ValueError(f"List item without list key: {raw_line}")
+            values = current[current_list_key]
+            if not isinstance(values, list):
+                raise ValueError(f"List key reused as scalar: {current_list_key}")
+            values.append(raw_line.split("- ", 1)[1].strip())
+            continue
+        if raw_line.startswith("    ") and ": " in raw_line:
+            key, value = raw_line.strip().split(": ", 1)
+            current[key] = value.strip()
+            current_list_key = None
+            continue
+        raise ValueError(f"Unsupported metrics registry line: {raw_line}")
+
+    if current is not None:
+        entries.append(current)
+
+    return [_metric_entry_from_mapping(entry) for entry in entries]
 
 
 def parse_metrics_markdown(path: Path) -> list[MetricEntry]:
@@ -116,6 +175,37 @@ def parse_metrics_markdown(path: Path) -> list[MetricEntry]:
         definition = _extract_bullet_value(body, "Definition") or "unknown"
         entries.append(MetricEntry(name=name, status=status, definition=definition))
     return entries
+
+
+def _metric_entry_from_mapping(entry: dict[str, object]) -> MetricEntry:
+    required_keys = {
+        "name",
+        "definition",
+        "required_events",
+        "required_fields",
+        "applicable_layers",
+        "status",
+    }
+    missing = required_keys - set(entry)
+    if missing:
+        raise ValueError(f"Metric entry missing keys: {sorted(missing)}")
+    status = str(entry["status"])
+    if status not in {"defined", "implemented", "stub", "deprecated"}:
+        raise ValueError(f"Invalid metric status for {entry['name']}: {status}")
+    return MetricEntry(
+        name=str(entry["name"]),
+        status=status,
+        definition=str(entry["definition"]),
+        required_events=tuple(_as_string_list(entry["required_events"])),
+        required_fields=tuple(_as_string_list(entry["required_fields"])),
+        applicable_layers=tuple(_as_string_list(entry["applicable_layers"])),
+    )
+
+
+def _as_string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"Expected list value, got {type(value).__name__}")
+    return [str(item) for item in value]
 
 
 def _extract_bullet_value(text: str, key: str) -> str | None:

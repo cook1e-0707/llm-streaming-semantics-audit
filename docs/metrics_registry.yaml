@@ -1,0 +1,195 @@
+metrics:
+  - name: TTFB_ms
+    definition: elapsed milliseconds from request_start to first_byte
+    required_events:
+      - request_start
+      - first_byte
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - trace_id
+    applicable_layers:
+      - provider
+      - sdk
+    status: implemented
+  - name: TTFT_ms
+    definition: elapsed milliseconds from request_start to first_token
+    required_events:
+      - request_start
+      - first_token
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - trace_id
+    applicable_layers:
+      - provider
+      - sdk
+      - framework
+      - application
+      - user_visible
+    status: implemented
+  - name: TTFSS_ms
+    definition: elapsed milliseconds from request_start to the first safety-relevant signal
+    required_events:
+      - request_start
+      - safety_annotation
+      - refusal
+      - content_filter
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - trace_id
+      - safety_signal
+    applicable_layers:
+      - provider
+      - sdk
+      - framework
+      - application
+    status: implemented
+  - name: validation_lag_chars
+    definition: emitted characters beyond the latest validation watermark at safety-signal time
+    required_events:
+      - chunk
+      - safety_annotation
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - char_count
+      - validation_range
+    applicable_layers:
+      - provider
+      - sdk
+      - framework
+      - application
+      - user_visible
+    status: stub
+  - name: validation_lag_tokens
+    definition: emitted tokens beyond the latest validation watermark at safety-signal time
+    required_events:
+      - chunk
+      - safety_annotation
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - token_count
+      - validation_range
+    applicable_layers:
+      - provider
+      - sdk
+      - framework
+      - application
+      - user_visible
+    status: stub
+  - name: exposure_window_chars
+    definition: characters visible before a later safety signal or invalidation covered them
+    required_events:
+      - chunk
+      - safety_annotation
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - content
+      - validation_range
+      - safety_signal
+    applicable_layers:
+      - application
+      - user_visible
+    status: stub
+  - name: exposure_window_tokens
+    definition: tokens visible before a later safety signal or invalidation covered them
+    required_events:
+      - chunk
+      - safety_annotation
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - token_count
+      - validation_range
+      - safety_signal
+    applicable_layers:
+      - application
+      - user_visible
+    status: stub
+  - name: exposure_window_ms
+    definition: elapsed milliseconds between first visibility and later safety signal or repair
+    required_events:
+      - chunk
+      - safety_annotation
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - validation_range
+      - safety_signal
+    applicable_layers:
+      - application
+      - user_visible
+    status: stub
+  - name: retroactive_invalidation
+    definition: whether a later event invalidated content already emitted downstream
+    required_events:
+      - safety_annotation
+      - refusal
+      - content_filter
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - validation_range
+      - metadata.invalidates_event_ids
+    applicable_layers:
+      - provider
+      - sdk
+      - framework
+      - application
+      - user_visible
+    status: stub
+  - name: terminal_reason_consistency
+    definition: whether terminal reasons agree across observable layers for one trace
+    required_events:
+      - stream_end
+      - final_response
+      - iterator_end
+      - settled
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - terminal_reason
+      - layer
+    applicable_layers:
+      - provider
+      - sdk
+      - framework
+      - application
+      - user_visible
+    status: stub
+  - name: settlement_lag_ms
+    definition: elapsed milliseconds between the last terminal output event and settled
+    required_events:
+      - stream_end
+      - final_response
+      - iterator_end
+      - settled
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - trace_id
+    applicable_layers:
+      - provider
+      - sdk
+      - framework
+      - application
+    status: implemented
+  - name: client_repair_burden
+    definition: client-side repair actions needed after delayed safety, refusal, filtering, or invalidation
+    required_events:
+      - safety_annotation
+      - refusal
+      - content_filter
+    required_fields:
+      - event_type
+      - timestamp_ms
+      - metadata.repair_action
+      - validation_range
+    applicable_layers:
+      - application
+      - user_visible
+    status: stub

@@ -1,23 +1,42 @@
 # LLM Streaming Semantics Audit
 
 This repository studies runtime safety semantics in streaming and non-streaming
-LLM APIs. The focus is release timing, validation timing, safety-signal
-propagation, refusal handling, settlement, and agent action commitment.
+LLM APIs. The focus is release timing, validation timing, visibility,
+safety-signal propagation, refusal handling, settlement, and agent action
+commitment.
 
 The project does not treat `stream=True` and `stream=False` as a sufficient
-binary framing. It separates provider wire-visible events, SDK-visible events,
-application-visible events, user-visible events, and agent action-commit events.
+binary framing. A provider can stream immediately, stream through a moderation
+buffer, emit delayed annotations, refuse at a terminal boundary, or expose
+different semantics through an SDK or framework. The audit therefore separates
+provider wire-visible events, SDK-visible events, application-visible events,
+user-visible events, and agent action-commit events.
 
 ## Core Question
 
 When is streamed LLM output actually safe to reveal, persist, or use for
 downstream actions?
 
+## Boundary Model
+
+- Release: when content is emitted from one layer to the next.
+- Validation: when a layer marks content or a span as checked, filtered,
+  refused, or otherwise safety-relevant.
+- Visibility: when content becomes visible to a user, persistent log,
+  downstream component, or tool.
+- Settlement: when a layer considers the trace complete and no more repair or
+  safety events are expected.
+- Action commit: when an agent or application commits an external side effect
+  based on generated content.
+
 ## Current Phase
 
 Phase 0 defines the research contract, shared terminology, trace schema, and
 initial metrics. Provider adapters and external API calls are intentionally out
 of scope for this phase.
+
+Next phase: provider documentation audit. Official source notes will be mapped
+to the taxonomy before any provider API measurement is added.
 
 ## Scope
 
@@ -41,6 +60,7 @@ Out of scope for the initial phase:
 - Research charter: `docs/research_charter.md`
 - Semantics taxonomy: `docs/semantics_taxonomy.md`
 - Metrics definitions: `docs/metrics.md`
+- Machine-readable metrics registry: `docs/metrics_registry.yaml`
 - Provider documentation matrix: `docs/provider_matrix.md`
 - Experiment scope: `docs/experiment_scope.md`
 - Legacy project notes: `docs/legacy_project_notes.md`
@@ -54,6 +74,7 @@ llm-streaming-semantics-audit/
 |   |-- experiment_scope.md
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
+|   |-- metrics_registry.yaml
 |   |-- provider_matrix.md
 |   |-- research_charter.md
 |   `-- semantics_taxonomy.md
@@ -84,20 +105,20 @@ llm-streaming-semantics-audit/
 ## Metrics Registry
 
 <!-- METRICS_REGISTRY_START -->
-| Metric | Status | Definition |
-| --- | --- | --- |
-| `TTFB_ms` | implemented | elapsed milliseconds from `request_start` to `first_byte`. |
-| `TTFT_ms` | implemented | elapsed milliseconds from `request_start` to `first_token`. |
-| `TTFSS_ms` | implemented | elapsed milliseconds from `request_start` to the first safety-relevant signal. |
-| `validation_lag_chars` | stub | emitted characters beyond the latest validation watermark at the time a safety signal is observed. |
-| `validation_lag_tokens` | stub | emitted tokens beyond the latest validation watermark at the time a safety signal is observed. |
-| `exposure_window_chars` | stub | number of characters that were visible before a later safety signal or invalidation covered them. |
-| `exposure_window_tokens` | stub | number of tokens that were visible before a later safety signal or invalidation covered them. |
-| `exposure_window_ms` | stub | elapsed milliseconds between first visibility of later-invalidated content and the safety signal or repair event. |
-| `retroactive_invalidation` | stub | boolean indicator that a later event invalidated, filtered, or refused content already emitted to a downstream layer. |
-| `terminal_reason_consistency` | stub | whether terminal reasons agree across provider, SDK, framework, application, and user-visible layers for one trace. |
-| `settlement_lag_ms` | implemented | elapsed milliseconds between the last terminal output event and `settled`. |
-| `client_repair_burden` | stub | count or structured score of client-side actions needed after delayed safety, refusal, filtering, or invalidation. |
+| Metric | Status | Layers | Definition |
+| --- | --- | --- | --- |
+| `TTFB_ms` | implemented | `provider`, `sdk` | elapsed milliseconds from request_start to first_byte |
+| `TTFT_ms` | implemented | `provider`, `sdk`, `framework`, `application`, `user_visible` | elapsed milliseconds from request_start to first_token |
+| `TTFSS_ms` | implemented | `provider`, `sdk`, `framework`, `application` | elapsed milliseconds from request_start to the first safety-relevant signal |
+| `validation_lag_chars` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | emitted characters beyond the latest validation watermark at safety-signal time |
+| `validation_lag_tokens` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | emitted tokens beyond the latest validation watermark at safety-signal time |
+| `exposure_window_chars` | stub | `application`, `user_visible` | characters visible before a later safety signal or invalidation covered them |
+| `exposure_window_tokens` | stub | `application`, `user_visible` | tokens visible before a later safety signal or invalidation covered them |
+| `exposure_window_ms` | stub | `application`, `user_visible` | elapsed milliseconds between first visibility and later safety signal or repair |
+| `retroactive_invalidation` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | whether a later event invalidated content already emitted downstream |
+| `terminal_reason_consistency` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | whether terminal reasons agree across observable layers for one trace |
+| `settlement_lag_ms` | implemented | `provider`, `sdk`, `framework`, `application` | elapsed milliseconds between the last terminal output event and settled |
+| `client_repair_burden` | stub | `application`, `user_visible` | client-side repair actions needed after delayed safety, refusal, filtering, or invalidation |
 <!-- METRICS_REGISTRY_END -->
 
 ## Safety and Data Policy

@@ -1,10 +1,12 @@
 import json
 import shutil
+import time
 from pathlib import Path
 
 from lssa.adapters.base import AdapterRequest
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
 from lssa.schema.events import EventType, ResponseMode
+from lssa.schema.metrics import time_to_first_byte_ms
 from lssa.tracing.validator import validate_trace
 from scripts.run_real_benign_pilot import (
     load_benign_prompts,
@@ -201,6 +203,27 @@ def test_openai_nonstreaming_mapping_from_fake_response() -> None:
         EventType.ITERATOR_END,
         EventType.SETTLED,
     ]
+
+
+def test_openai_nonstreaming_run_measures_client_latency() -> None:
+    class SlowFakeClient:
+        def create_response(self, request):
+            time.sleep(0.002)
+            return {"output_text": "A careful trace records events in order."}
+
+    request = AdapterRequest(
+        trace_id="fake-openai-nonstreaming-run",
+        prompt_id="short_text_generation",
+        prompt="Write one harmless sentence.",
+        response_mode=ResponseMode.NON_STREAMING,
+        model="fake-model",
+    )
+    adapter = OpenAIResponsesAdapter(client=SlowFakeClient())
+
+    events = list(adapter.run(request))
+
+    assert validate_trace(events).ok
+    assert (time_to_first_byte_ms(events) or 0) >= 1
 
 
 def test_fake_openai_pilot_writes_valid_trace(tmp_path: Path) -> None:

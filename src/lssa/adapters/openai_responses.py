@@ -68,8 +68,63 @@ class OpenAIResponsesAdapter:
         if request.response_mode == ResponseMode.STREAMING:
             raw_events = self.client.stream_response(request)
             return self.map_streaming_events(request, raw_events)
-        raw_response = self.client.create_response(request)
-        return self.map_nonstreaming_response(request, raw_response)
+        return self._run_nonstreaming_request(request)
+
+    def _run_nonstreaming_request(self, request: AdapterRequest) -> list[StreamEvent]:
+        recorder = _recorder_for_request(request, self.provider_family, self.api_surface)
+        recorder.append(
+            EventType.REQUEST_START,
+            raw_event_type="lssa.request_start",
+            payload_summary="request accepted by local harness",
+        )
+        recorder.append(
+            EventType.REQUEST_SENT,
+            raw_event_type="lssa.request_sent",
+            payload_summary="request sent to OpenAI Responses API",
+        )
+        try:
+            raw_response = self.client.create_response(request)
+        except Exception:
+            recorder.append(
+                EventType.ERROR,
+                terminal_reason=TerminalReasonType.ERROR,
+                raw_event_type="lssa.provider_exception",
+                payload_summary="OpenAI non-streaming request failed",
+                metadata={"recoverable": False},
+            )
+            recorder.append(
+                EventType.SETTLED,
+                terminal_reason=TerminalReasonType.ERROR,
+                raw_event_type="lssa.settled",
+                payload_summary="OpenAI non-streaming trace settled after error",
+            )
+            return list(recorder.events)
+
+        content = _response_text(raw_response)
+        recorder.append(
+            EventType.FIRST_BYTE,
+            raw_event_type="response.completed",
+            payload_summary="non-streaming response received",
+        )
+        recorder.append(
+            EventType.FINAL_RESPONSE,
+            content=content,
+            char_count=len(content) if content else None,
+            raw_event_type="response.completed",
+            payload_summary="complete non-streaming response",
+        )
+        recorder.append(
+            EventType.ITERATOR_END,
+            raw_event_type="lssa.iterator_end",
+            payload_summary="non-streaming call returned",
+        )
+        recorder.append(
+            EventType.SETTLED,
+            terminal_reason=TerminalReasonType.COMPLETE,
+            raw_event_type="lssa.settled",
+            payload_summary="OpenAI non-streaming trace settled",
+        )
+        return list(recorder.events)
 
     def map_streaming_events(
         self,

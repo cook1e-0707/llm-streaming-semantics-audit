@@ -38,11 +38,19 @@ except ImportError:
 
 from lssa.adapters.mock import MockScenario
 
-ALLOWED_ADAPTER_FILES = {"__init__.py", "base.py", "mock.py"}
+ALLOWED_ADAPTER_FILES = {
+    "__init__.py",
+    "anthropic_messages.py",
+    "base.py",
+    "mock.py",
+    "openai_responses.py",
+}
 REQUIRED_DOCS = {
-    "docs/phase2_plan.md",
-    "docs/trace_contract.md",
     "docs/benign_pilot_policy.md",
+    "docs/phase2_plan.md",
+    "docs/phase2_real_pilot_plan.md",
+    "docs/real_api_data_policy.md",
+    "docs/trace_contract.md",
 }
 PROMPT_FORBIDDEN_TERMS = {
     "unsafe",
@@ -88,6 +96,7 @@ def check_phase2_pilot_ready(root: Path) -> Phase2GateResult:
         _phase2_docs_check(root),
         _mock_pilot_check(root),
         _adapter_scope_check(root),
+        _real_pilot_runner_guard_check(root),
         _prompt_scope_check(root),
         _forbidden_tracked_files_check(root),
     ]
@@ -173,9 +182,27 @@ def _adapter_scope_check(root: Path) -> GateCheck:
     }
     disallowed = sorted(files - ALLOWED_ADAPTER_FILES)
     return GateCheck(
-        name="no_real_provider_adapters",
+        name="only_allowed_provider_adapters",
         ok=not disallowed,
-        detail="only base and mock adapters present" if not disallowed else ", ".join(disallowed),
+        detail="only approved P2 adapters present" if not disallowed else ", ".join(disallowed),
+    )
+
+
+def _real_pilot_runner_guard_check(root: Path) -> GateCheck:
+    script_path = root / "scripts" / "run_real_benign_pilot.py"
+    if not script_path.exists():
+        return GateCheck(
+            name="real_pilot_runner_requires_network_opt_in",
+            ok=False,
+            detail="missing scripts/run_real_benign_pilot.py",
+        )
+    content = script_path.read_text(encoding="utf-8")
+    required = ["--allow-network", "network=disabled", "OPENAI_API_KEY"]
+    missing = [item for item in required if item not in content]
+    return GateCheck(
+        name="real_pilot_runner_requires_network_opt_in",
+        ok=not missing,
+        detail="network guard present" if not missing else ", ".join(missing),
     )
 
 

@@ -37,9 +37,9 @@ templates, and legacy inventory.
 
 Phase 1 is complete: the provider documentation evidence registry, generated
 provider matrix, unknown-field review, and readiness quality gate are in place.
-Phase 2 has started with a provider-neutral mock trace harness. The next allowed
-step is P2.M2, limited to a small benign-only raw API pilot with explicit
-network opt-in.
+Phase 2 has started with a provider-neutral mock trace harness. P2.M2 is being
+prepared as a small benign-only raw API pilot. Real provider calls remain
+disabled by default and require explicit `--allow-network`.
 
 ## Project Progress
 
@@ -66,7 +66,7 @@ Next milestone: P2.M2
 |   `-- [done] P1.M5 Phase 1 readiness quality gate
 |-- [in_progress] P2 Raw API Benign Pilot
 |   |-- [done] P2.M1 Provider adapter interface
-|   |-- [next] P2.M2 Benign streaming trace collection
+|   |-- [in_progress] P2.M2 Benign streaming trace collection
 |   `-- [planned] P2.M3 Trace quality checks
 |-- [deferred] P3 Safety-Signal Pilot
 |   |-- [planned] P3.M1 Redacted prompt policy
@@ -108,8 +108,10 @@ Out of scope for the initial phase:
 - Phase 1 unknown-field review: `docs/phase1_unknown_fields_review.md`
 - Phase 1 readiness gate: `docs/phase1_quality_gate.md`
 - Phase 2 plan: `docs/phase2_plan.md`
+- Phase 2 real pilot plan: `docs/phase2_real_pilot_plan.md`
 - Trace contract: `docs/trace_contract.md`
 - Benign pilot policy: `docs/benign_pilot_policy.md`
+- Real API data policy: `docs/real_api_data_policy.md`
 - Experiment scope: `docs/experiment_scope.md`
 - Legacy project notes: `docs/legacy_project_notes.md`
 
@@ -135,9 +137,11 @@ llm-streaming-semantics-audit/
 |   |-- phase1_quality_gate.md
 |   |-- phase1_unknown_fields_review.md
 |   |-- phase2_plan.md
+|   |-- phase2_real_pilot_plan.md
 |   |-- project_progress.toml
 |   |-- provider_evidence.yaml
 |   |-- provider_matrix.md
+|   |-- real_api_data_policy.md
 |   |-- research_charter.md
 |   |-- semantics_taxonomy.md
 |   `-- trace_contract.md
@@ -147,14 +151,17 @@ llm-streaming-semantics-audit/
 |   |-- generate_provider_matrix.py
 |   |-- provider_evidence.py
 |   |-- run_mock_pilot.py
+|   |-- run_real_benign_pilot.py
 |   |-- update_readme_status.py
 |   `-- validate_provider_matrix.py
 |-- src/
 |   `-- lssa/
 |       |-- adapters/
 |       |   |-- __init__.py
+|       |   |-- anthropic_messages.py
 |       |   |-- base.py
-|       |   `-- mock.py
+|       |   |-- mock.py
+|       |   `-- openai_responses.py
 |       |-- prompts/
 |       |   `-- benign_prompts.yaml
 |       |-- schema/
@@ -178,6 +185,7 @@ llm-streaming-semantics-audit/
 |   |-- test_phase2_pilot_ready.py
 |   |-- test_provider_matrix.py
 |   |-- test_readme_status.py
+|   |-- test_real_benign_pilot.py
 |   |-- test_trace_recorder.py
 |   `-- test_trace_validator.py
 |-- .env.example

@@ -79,6 +79,7 @@ Next milestone: P3.M2
 |   |-- [done] P3.M1 Redacted prompt policy
 |   |-- [done] P3.M2a Mock safety-signal harness
 |   |-- [done] P3.M2b External safety prompt source
+|   |-- [done] P3.M2c Optional judge adjudication
 |   |-- [next] P3.M2 Safety signal timing traces
 |   `-- [planned] P3.M3 Exposure-window metrics
 `-- [deferred] P4 Agent Framework Propagation
@@ -132,6 +133,7 @@ Out of scope for the initial phase:
 - Phase 3 mock safety harness: `docs/phase3_mock_safety_harness.md`
 - External safety prompt source: `docs/external_safety_prompt_source.md`
 - Phase 3 safety pilot plan: `docs/phase3_safety_pilot_plan.md`
+- Optional judge adjudication plan: `docs/judge_adjudication_plan.md`
 - Safety prompt policy: `docs/safety_prompt_policy.md`
 - Redacted safety prompt registry example: `docs/safety_prompt_registry.example.yaml`
 - Trace contract: `docs/trace_contract.md`
@@ -164,6 +166,7 @@ llm-streaming-semantics-audit/
 |   |-- benign_pilot_policy.md
 |   |-- experiment_scope.md
 |   |-- external_safety_prompt_source.md
+|   |-- judge_adjudication_plan.md
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
 |   |-- metrics_registry.yaml
@@ -188,6 +191,7 @@ llm-streaming-semantics-audit/
 |   |-- stop_reason_probe_plan.md
 |   `-- trace_contract.md
 |-- scripts/
+|   |-- check_judge_ready.py
 |   |-- check_p3_mock_safety_ready.py
 |   |-- check_p3_safety_pilot_ready.py
 |   |-- check_phase1_ready.py
@@ -199,6 +203,7 @@ llm-streaming-semantics-audit/
 |   |-- inspect_external_safety_prompts.py
 |   |-- provider_evidence.py
 |   |-- run_benign_batch.py
+|   |-- run_judge_adjudication.py
 |   |-- run_mock_pilot.py
 |   |-- run_mock_safety_pilot.py
 |   |-- run_real_benign_pilot.py
@@ -218,6 +223,9 @@ llm-streaming-semantics-audit/
 |       |-- experiments/
 |       |   |-- __init__.py
 |       |   `-- manifest.py
+|       |-- judging/
+|       |   |-- __init__.py
+|       |   `-- nvidia.py
 |       |-- prompts/
 |       |   |-- benign_prompts.yaml
 |       |   `-- safety_external.py
@@ -247,6 +255,7 @@ llm-streaming-semantics-audit/
 |   |-- test_external_safety_prompts.py
 |   |-- test_mock_provider.py
 |   |-- test_mock_safety_pilot.py
+|   |-- test_nvidia_judge.py
 |   |-- test_phase1_quality_gate.py
 |   |-- test_phase2_pilot_ready.py
 |   |-- test_phase3_quality_gate.py

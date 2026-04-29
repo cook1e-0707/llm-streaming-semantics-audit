@@ -129,6 +129,11 @@ title = "External safety prompt source"
 status = "done"
 
 [[phases.milestones]]
+id = "P3.M2c"
+title = "Optional judge adjudication"
+status = "done"
+
+[[phases.milestones]]
 id = "P3.M2"
 title = "Safety signal timing traces"
 status = "next"

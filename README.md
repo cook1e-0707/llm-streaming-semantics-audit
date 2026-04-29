@@ -210,6 +210,7 @@ llm-streaming-semantics-audit/
 |   |-- run_p3_overnight_batch.py
 |   |-- run_real_benign_pilot.py
 |   |-- run_safety_signal_pilot.py
+|   |-- summarize_p3_run.py
 |   |-- summarize_real_pilot.py
 |   |-- update_readme_status.py
 |   `-- validate_provider_matrix.py
@@ -259,6 +260,7 @@ llm-streaming-semantics-audit/
 |   |-- test_mock_safety_pilot.py
 |   |-- test_nvidia_judge.py
 |   |-- test_p3_overnight_batch.py
+|   |-- test_p3_run_summary.py
 |   |-- test_phase1_quality_gate.py
 |   |-- test_phase2_pilot_ready.py
 |   |-- test_phase3_quality_gate.py

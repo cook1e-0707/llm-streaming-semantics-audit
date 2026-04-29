@@ -68,6 +68,16 @@ artifacts/p3_overnight/<run_id>/
 The summary aggregates terminal reasons, provider stop reasons, event type
 counts, and judge labels. It does not store raw prompt text.
 
+After a run has completed, compute post-hoc P3 metrics, including per-chunk
+streaming latency aggregates:
+
+```bash
+python scripts/summarize_p3_run.py \
+  --run-root artifacts/p3_overnight/<run_id>
+```
+
+This writes `p3_run_metrics.json` under the run directory.
+
 ## Interpretation
 
 P3 overnight runs are safety-signal timing measurements. Judge labels are

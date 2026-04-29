@@ -29,7 +29,9 @@ LSSA_JUDGE_B_MODEL=meta/llama-guard-4-12b
 Profile A omits `max_tokens` by default because the NVIDIA NIM reference for
 `nvidia/llama-3.1-nemotron-safety-guard-8b-v3` does not list that body
 parameter. Profile B sends `max_tokens=30`, matching the narrow output range
-documented for `meta/llama-guard-4-12b`.
+documented for `meta/llama-guard-4-12b`. Profile B also sends a single `user`
+message because the hosted Llama Guard 4 endpoint documents only `user` and
+`assistant` message roles.
 
 ## Official References
 

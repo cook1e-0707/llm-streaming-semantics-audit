@@ -47,6 +47,35 @@ def test_nvidia_judge_with_fake_client_returns_redacted_result() -> None:
     assert "redacted test prompt body" not in json.dumps(payload)
 
 
+def test_llama_guard_profile_uses_user_only_message() -> None:
+    captured = {}
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            captured.update(kwargs)
+            return {"choices": [{"message": {"content": "safe"}}]}
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeClient:
+        chat = FakeChat()
+
+    judge = NvidiaGuardJudge(
+        config=NvidiaJudgeConfig(
+            profile="b",
+            model="meta/llama-guard-4-12b",
+            max_tokens=30,
+        ),
+        client=FakeClient(),
+    )
+
+    judge.classify_prompt(prompt_id="safety-test-1", prompt_text="redacted body")
+
+    assert [message["role"] for message in captured["messages"]] == ["user"]
+    assert captured["max_tokens"] == 30
+
+
 def test_nvidia_judge_profile_configs(monkeypatch) -> None:
     _clear_judge_env(monkeypatch)
 

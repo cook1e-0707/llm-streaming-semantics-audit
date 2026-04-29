@@ -1,0 +1,61 @@
+sources:
+  - source_id: openai_guardrails_streaming_output
+    provider_family: OpenAI / OpenAI Guardrails
+    api_surface: OpenAI Guardrails Python
+    source_title: TODO(source title)
+    source_url: TODO(source URL)
+    access_date: "2026-04-29"
+    source_last_updated: unknown
+    source_type: official_docs
+    evidence_status: TODO(source needed)
+    claims: []
+  - source_id: azure_openai_content_streaming
+    provider_family: Azure OpenAI
+    api_surface: Azure OpenAI content streaming
+    source_title: TODO(source title)
+    source_url: TODO(source URL)
+    access_date: "2026-04-29"
+    source_last_updated: unknown
+    source_type: official_docs
+    evidence_status: TODO(source needed)
+    claims: []
+  - source_id: aws_bedrock_guardrails_streaming
+    provider_family: AWS Bedrock Guardrails
+    api_surface: Amazon Bedrock Guardrails streaming
+    source_title: TODO(source title)
+    source_url: TODO(source URL)
+    access_date: "2026-04-29"
+    source_last_updated: unknown
+    source_type: official_docs
+    evidence_status: TODO(source needed)
+    claims: []
+  - source_id: anthropic_streaming_refusals
+    provider_family: Anthropic Claude
+    api_surface: Claude streaming refusals
+    source_title: TODO(source title)
+    source_url: TODO(source URL)
+    access_date: "2026-04-29"
+    source_last_updated: unknown
+    source_type: official_docs
+    evidence_status: TODO(source needed)
+    claims: []
+  - source_id: google_vertex_gemini_safety
+    provider_family: Google Gemini / Vertex AI
+    api_surface: Vertex AI Gemini safety and inference
+    source_title: TODO(source title)
+    source_url: TODO(source URL)
+    access_date: "2026-04-29"
+    source_last_updated: unknown
+    source_type: official_docs
+    evidence_status: TODO(source needed)
+    claims: []
+  - source_id: openai_agents_sdk_results
+    provider_family: OpenAI Agents SDK
+    api_surface: OpenAI Agents Python streaming results
+    source_title: TODO(source title)
+    source_url: TODO(source URL)
+    access_date: "2026-04-29"
+    source_last_updated: unknown
+    source_type: official_docs
+    evidence_status: TODO(source needed)
+    claims: []

@@ -1,22 +1,17 @@
 # Provider Documentation Matrix
 
-This matrix is a Phase 0 template for documentation audit. It must not be read
-as a claim about provider behavior. Unsupported fields remain explicit
-`TODO(source needed)` or `unknown` values until a source note or trace supports
-them.
+This matrix is generated from `docs/provider_evidence.yaml`. Do not edit
+the table by hand; update the evidence registry and run
+`python scripts/generate_provider_matrix.py`.
 
-Allowed `evidence_status` values:
+Unsupported fields are rendered as `unknown_from_official_docs` until
+an official documentation claim supports a more specific value.
 
-- `TODO(source needed)`: no source has been recorded.
-- `unknown`: source note exists but does not support the field yet.
-- `partial`: at least one field is supported, but the row remains incomplete.
-- `supported`: every non-placeholder semantics field is supported by the
-  evidence file.
-
-| provider_family | api_surface | response_mode | release_policy | moderation_timing | safety_signal_surface | validation_watermark | refusal_semantics | settlement_semantics | client_obligations | evidence_file | evidence_status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OpenAI / OpenAI Guardrails | unknown | unknown | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | docs/source_notes/openai_guardrails.md | TODO(source needed) |
-| Azure OpenAI | unknown | unknown | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | docs/source_notes/azure_openai.md | TODO(source needed) |
-| AWS Bedrock Guardrails | unknown | unknown | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | docs/source_notes/aws_bedrock.md | TODO(source needed) |
-| Anthropic Claude | unknown | unknown | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | docs/source_notes/anthropic.md | TODO(source needed) |
-| Google Gemini / Vertex AI | unknown | unknown | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | TODO(source needed) | docs/source_notes/google_vertex_gemini.md | TODO(source needed) |
+| provider_family | api_surface | response_mode | release_policy | moderation_timing | safety_signal_surface | validation_watermark | refusal_semantics | settlement_semantics | client_obligations | documented_limit_or_bound | source_id | evidence_status | confidence |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| OpenAI / OpenAI Guardrails | OpenAI Guardrails Python | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | openai_guardrails_streaming_output | TODO(source needed) | unknown |
+| Azure OpenAI | Azure OpenAI content streaming | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | azure_openai_content_streaming | TODO(source needed) | unknown |
+| AWS Bedrock Guardrails | Amazon Bedrock Guardrails streaming | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | aws_bedrock_guardrails_streaming | TODO(source needed) | unknown |
+| Anthropic Claude | Claude streaming refusals | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | anthropic_streaming_refusals | TODO(source needed) | unknown |
+| Google Gemini / Vertex AI | Vertex AI Gemini safety and inference | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | google_vertex_gemini_safety | TODO(source needed) | unknown |
+| OpenAI Agents SDK | OpenAI Agents Python streaming results | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | unknown_from_official_docs | openai_agents_sdk_results | TODO(source needed) | unknown |

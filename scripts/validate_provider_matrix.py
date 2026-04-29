@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate provider documentation matrix placeholders and evidence files."""
+"""Validate generated provider documentation matrix evidence backing."""
 
 from __future__ import annotations
 
@@ -8,38 +8,33 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+try:
+    from .generate_provider_matrix import MATRIX_COLUMNS
+    from .provider_evidence import (
+        ALLOWED_CONFIDENCE,
+        ALLOWED_EVIDENCE_STATUS,
+        MATRIX_SEMANTIC_COLUMNS,
+        UNKNOWN_FIELD_VALUES,
+        load_provider_evidence,
+        supported_semantics_by_source,
+        validate_provider_evidence,
+    )
+except ImportError:
+    from generate_provider_matrix import MATRIX_COLUMNS
+    from provider_evidence import (
+        ALLOWED_CONFIDENCE,
+        ALLOWED_EVIDENCE_STATUS,
+        MATRIX_SEMANTIC_COLUMNS,
+        UNKNOWN_FIELD_VALUES,
+        load_provider_evidence,
+        supported_semantics_by_source,
+        validate_provider_evidence,
+    )
+
 REQUIRED_COLUMNS = [
-    "provider_family",
-    "api_surface",
-    "response_mode",
-    "release_policy",
-    "moderation_timing",
-    "safety_signal_surface",
-    "validation_watermark",
-    "refusal_semantics",
-    "settlement_semantics",
-    "client_obligations",
-    "evidence_file",
-    "evidence_status",
+    *MATRIX_COLUMNS,
 ]
-SEMANTICS_COLUMNS = [
-    "api_surface",
-    "response_mode",
-    "release_policy",
-    "moderation_timing",
-    "safety_signal_surface",
-    "validation_watermark",
-    "refusal_semantics",
-    "settlement_semantics",
-    "client_obligations",
-]
-UNKNOWN_VALUES = {"unknown", "TODO(source needed)"}
-ALLOWED_EVIDENCE_STATUS = {
-    "TODO(source needed)",
-    "unknown",
-    "partial",
-    "supported",
-}
+EXPLICIT_UNKNOWN_VALUES = UNKNOWN_FIELD_VALUES | {"unknown_from_official_docs"}
 
 
 @dataclass(frozen=True)
@@ -72,6 +67,14 @@ def validate_provider_matrix(root: Path) -> ValidationResult:
     errors: list[str] = []
 
     try:
+        sources = load_provider_evidence(root)
+        errors.extend(validate_provider_evidence(sources))
+        source_ids = {source.source_id for source in sources}
+        support_by_source = supported_semantics_by_source(sources)
+    except ValueError as exc:
+        return ValidationResult(ok=False, errors=(str(exc),))
+
+    try:
         rows = parse_markdown_table(matrix_path)
     except ValueError as exc:
         return ValidationResult(ok=False, errors=(str(exc),))
@@ -94,19 +97,25 @@ def validate_provider_matrix(root: Path) -> ValidationResult:
                 f"{provider}: invalid evidence_status {evidence_status!r}"
             )
 
-        evidence_file = row.get("evidence_file", "")
-        if evidence_file:
-            evidence_path = root / evidence_file
-            if not evidence_path.exists():
-                errors.append(f"{provider}: evidence file does not exist: {evidence_file}")
+        confidence = row.get("confidence", "")
+        if confidence not in ALLOWED_CONFIDENCE:
+            errors.append(f"{provider}: invalid confidence {confidence!r}")
 
-        if evidence_status in {"TODO(source needed)", "unknown"}:
-            for column in SEMANTICS_COLUMNS:
-                value = row.get(column, "")
-                if value not in UNKNOWN_VALUES:
-                    errors.append(
-                        f"{provider}: {column} is filled without evidence status"
-                    )
+        source_id = row.get("source_id", "")
+        if source_id not in source_ids:
+            errors.append(f"{provider}: source_id does not exist: {source_id}")
+            continue
+
+        for column in MATRIX_SEMANTIC_COLUMNS:
+            value = row.get(column, "")
+            if value in EXPLICIT_UNKNOWN_VALUES:
+                continue
+            supported = support_by_source[source_id].get(column, set())
+            rendered_values = {part.strip() for part in value.split(";")}
+            if not rendered_values <= supported:
+                errors.append(
+                    f"{provider}: {column} lacks supporting evidence for {value!r}"
+                )
 
     return ValidationResult(ok=not errors, errors=tuple(errors))
 

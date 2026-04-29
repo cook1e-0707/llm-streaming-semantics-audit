@@ -48,7 +48,7 @@ README by `python scripts/update_readme_status.py`.
 ```text
 Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
 Current phase: P1
-Next milestone: P1.M1
+Next milestone: P1.M2
 
 |-- [done] P0 Research Contract and Measurement Schema
 |   |-- [done] P0.M1 Repository scaffold
@@ -58,7 +58,7 @@ Next milestone: P1.M1
 |   `-- [done] P0.M5 Legacy project inventory
 |-- [in_progress] P1 Provider Documentation Audit
 |   |-- [done] P1.M1 Source note templates
-|   |-- [next] P1.M2 Official source evidence collection
+|   |-- [in_progress] P1.M2 Official source evidence collection
 |   |-- [in_progress] P1.M3 Provider matrix evidence validation
 |   `-- [planned] P1.M4 Open questions and unknown-field review
 |-- [planned] P2 Raw API Benign Pilot
@@ -100,6 +100,7 @@ Out of scope for the initial phase:
 - Metrics definitions: `docs/metrics.md`
 - Machine-readable metrics registry: `docs/metrics_registry.yaml`
 - Machine-readable project progress: `docs/project_progress.toml`
+- Machine-readable provider evidence: `docs/provider_evidence.yaml`
 - Provider documentation matrix: `docs/provider_matrix.md`
 - Experiment scope: `docs/experiment_scope.md`
 - Legacy project notes: `docs/legacy_project_notes.md`
@@ -115,6 +116,7 @@ llm-streaming-semantics-audit/
 |   |   |-- aws_bedrock.md
 |   |   |-- azure_openai.md
 |   |   |-- google_vertex_gemini.md
+|   |   |-- openai_agents_sdk.md
 |   |   |-- openai_guardrails.md
 |   |   `-- README.md
 |   |-- experiment_scope.md
@@ -122,10 +124,13 @@ llm-streaming-semantics-audit/
 |   |-- metrics.md
 |   |-- metrics_registry.yaml
 |   |-- project_progress.toml
+|   |-- provider_evidence.yaml
 |   |-- provider_matrix.md
 |   |-- research_charter.md
 |   `-- semantics_taxonomy.md
 |-- scripts/
+|   |-- generate_provider_matrix.py
+|   |-- provider_evidence.py
 |   |-- update_readme_status.py
 |   `-- validate_provider_matrix.py
 |-- src/

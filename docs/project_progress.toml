@@ -1,5 +1,5 @@
 current_phase = "P1"
-next_milestone = "P1.M1"
+next_milestone = "P1.M2"
 
 [status_labels]
 done = "done"
@@ -54,7 +54,7 @@ status = "done"
 [[phases.milestones]]
 id = "P1.M2"
 title = "Official source evidence collection"
-status = "next"
+status = "in_progress"
 
 [[phases.milestones]]
 id = "P1.M3"

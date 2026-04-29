@@ -90,4 +90,5 @@ def test_p3_result_audit_counts_safety_and_chunk_latency(tmp_path: Path) -> None
     assert payload["content_filter_distribution"]["openai_responses:streaming"] == {
         "unit_test/redacted_category": 1
     }
+    assert payload["content_filter_examples"][0]["prompt_id"] == "safety-test-1"
     assert "Chunk Latency By Provider/Mode" in markdown

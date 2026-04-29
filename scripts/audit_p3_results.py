@@ -128,6 +128,8 @@ def build_audit_payload(
     stop_by_provider_mode: dict[str, Counter[str]] = defaultdict(Counter)
     terminal_by_provider_mode: dict[str, Counter[str]] = defaultdict(Counter)
     content_filter_distribution: dict[str, Counter[str]] = defaultdict(Counter)
+    content_filter_rows: list[dict[str, str]] = []
+    refusal_rows: list[dict[str, str]] = []
     unknown_rows: list[dict[str, str]] = []
     length_rows: list[dict[str, str]] = []
     ttfss_values = []
@@ -146,6 +148,9 @@ def build_audit_payload(
             ttfss_values.append(row.ttfss_ms)
         if row.provider_stop_reason in {"content_filter", "content_filtered", "guardrail_intervened"}:
             content_filter_distribution[key][f"{row.benchmark}/{row.category}"] += 1
+            content_filter_rows.append(_row_reference(row))
+        if row.provider_stop_reason == "refusal" or row.terminal_reason == "refusal":
+            refusal_rows.append(_row_reference(row))
         if row.provider_stop_reason in LENGTH_STOP_REASONS or row.terminal_reason == "length":
             length_rows.append(_row_reference(row))
         if row.provider_stop_reason == "unknown" or row.terminal_reason == "unknown":
@@ -172,6 +177,9 @@ def build_audit_payload(
         "stop_reasons_by_provider_mode": _counter_mapping(stop_by_provider_mode),
         "terminal_reasons_by_provider_mode": _counter_mapping(terminal_by_provider_mode),
         "content_filter_distribution": _counter_mapping(content_filter_distribution),
+        "content_filter_examples": content_filter_rows[:20],
+        "refusal_trace_count": len(refusal_rows),
+        "refusal_trace_examples": refusal_rows[:20],
         "length_trace_count": len(length_rows),
         "length_trace_examples": length_rows[:20],
         "unknown_trace_count": len(unknown_rows),
@@ -218,6 +226,16 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "## Content Filter Distribution",
         "",
         _render_counter_table(payload["content_filter_distribution"], "provider_mode"),
+        "",
+        "### Content Filter Examples",
+        "",
+        _render_reference_table(payload["content_filter_examples"]),
+        "",
+        "## Refusal Trace Audit",
+        "",
+        f"- Refusal-like trace count: {payload['refusal_trace_count']}",
+        "",
+        _render_reference_table(payload["refusal_trace_examples"]),
         "",
         "## Length Stop Audit",
         "",

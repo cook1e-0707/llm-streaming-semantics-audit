@@ -41,8 +41,9 @@ Phase 2 is complete: the repository has a provider-neutral mock trace harness,
 redacted benign pilot summaries for OpenAI Responses, Anthropic Messages, and
 AWS Bedrock Converse, a cross-provider benign lifecycle comparison, and a
 dry-run scaled benign batch runner. Phase 3 has started at the policy and mock
-safety-signal layer only; real safety-signal timing runs remain blocked until
-prompt governance and retention rules are reviewed.
+safety-signal layer. The legacy safety prompt directory is configured only as
+an external source; real safety-signal timing runs require guarded opt-in,
+reviewed source status, and redacted outputs.
 
 ## Project Progress
 
@@ -77,7 +78,8 @@ Next milestone: P3.M2
 |-- [in_progress] P3 Safety-Signal Pilot
 |   |-- [done] P3.M1 Redacted prompt policy
 |   |-- [done] P3.M2a Mock safety-signal harness
-|   |-- [blocked] P3.M2 Safety signal timing traces
+|   |-- [done] P3.M2b External safety prompt source
+|   |-- [next] P3.M2 Safety signal timing traces
 |   `-- [planned] P3.M3 Exposure-window metrics
 `-- [deferred] P4 Agent Framework Propagation
     |-- [planned] P4.M1 Framework instrumentation plan
@@ -128,6 +130,8 @@ Out of scope for the initial phase:
 - Phase 3 plan: `docs/phase3_plan.md`
 - Phase 3 quality gate: `docs/phase3_quality_gate.md`
 - Phase 3 mock safety harness: `docs/phase3_mock_safety_harness.md`
+- External safety prompt source: `docs/external_safety_prompt_source.md`
+- Phase 3 safety pilot plan: `docs/phase3_safety_pilot_plan.md`
 - Safety prompt policy: `docs/safety_prompt_policy.md`
 - Redacted safety prompt registry example: `docs/safety_prompt_registry.example.yaml`
 - Trace contract: `docs/trace_contract.md`
@@ -159,6 +163,7 @@ llm-streaming-semantics-audit/
 |   |-- benign_experiment_manifest.example.toml
 |   |-- benign_pilot_policy.md
 |   |-- experiment_scope.md
+|   |-- external_safety_prompt_source.md
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
 |   |-- metrics_registry.yaml
@@ -169,6 +174,7 @@ llm-streaming-semantics-audit/
 |   |-- phase3_mock_safety_harness.md
 |   |-- phase3_plan.md
 |   |-- phase3_quality_gate.md
+|   |-- phase3_safety_pilot_plan.md
 |   |-- project_progress.toml
 |   |-- provider_evidence.yaml
 |   |-- provider_matrix.md
@@ -183,17 +189,20 @@ llm-streaming-semantics-audit/
 |   `-- trace_contract.md
 |-- scripts/
 |   |-- check_p3_mock_safety_ready.py
+|   |-- check_p3_safety_pilot_ready.py
 |   |-- check_phase1_ready.py
 |   |-- check_phase2_pilot_ready.py
 |   |-- check_phase3_ready.py
 |   |-- check_scaled_benign_ready.py
 |   |-- compare_benign_lifecycle.py
 |   |-- generate_provider_matrix.py
+|   |-- inspect_external_safety_prompts.py
 |   |-- provider_evidence.py
 |   |-- run_benign_batch.py
 |   |-- run_mock_pilot.py
 |   |-- run_mock_safety_pilot.py
 |   |-- run_real_benign_pilot.py
+|   |-- run_safety_signal_pilot.py
 |   |-- summarize_real_pilot.py
 |   |-- update_readme_status.py
 |   `-- validate_provider_matrix.py
@@ -210,7 +219,8 @@ llm-streaming-semantics-audit/
 |       |   |-- __init__.py
 |       |   `-- manifest.py
 |       |-- prompts/
-|       |   `-- benign_prompts.yaml
+|       |   |-- benign_prompts.yaml
+|       |   `-- safety_external.py
 |       |-- schema/
 |       |   |-- __init__.py
 |       |   |-- events.py
@@ -234,6 +244,7 @@ llm-streaming-semantics-audit/
 |   |-- test_benign_batch.py
 |   |-- test_benign_lifecycle_comparison.py
 |   |-- test_event_schema.py
+|   |-- test_external_safety_prompts.py
 |   |-- test_mock_provider.py
 |   |-- test_mock_safety_pilot.py
 |   |-- test_phase1_quality_gate.py

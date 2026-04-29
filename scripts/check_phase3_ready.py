@@ -153,13 +153,13 @@ def _project_progress_check(root: Path) -> GateCheck:
         "P2_done": phase_status.get("P2") == "done",
         "P3_in_progress": phase_status.get("P3") == "in_progress",
         "P3_M1_done": milestone_status.get("P3.M1") == "done",
-        "P3_M2_blocked": milestone_status.get("P3.M2") == "blocked",
+        "P3_M2_guarded": milestone_status.get("P3.M2") in {"blocked", "next"},
     }
     failed = [name for name, ok in expected.items() if not ok]
     return GateCheck(
         name="phase3_progress_state",
         ok=not failed,
-        detail="P3 policy active and P3.M2 intentionally blocked" if not failed else ", ".join(failed),
+        detail="P3 policy active and P3.M2 remains guarded" if not failed else ", ".join(failed),
     )
 
 

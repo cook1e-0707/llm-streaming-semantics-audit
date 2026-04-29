@@ -37,6 +37,12 @@ Validate safety-signal event ordering, redacted trace persistence, TTFSS, and
 range-label metrics using synthetic mock traces only. This does not authorize
 real safety-signal provider calls.
 
+### P3.M2b External Safety Prompt Source
+
+Configure the legacy safety prompt directory as an external controlled source.
+The repository records only inventory metadata and redacted run plans; raw
+unsafe prompt text remains outside git.
+
 ### P3.M3 Exposure-Window Metrics
 
 Compute exposure-window and validation-lag metrics only after traces include
@@ -75,4 +81,5 @@ Before running real safety-signal pilots, the repository must have:
 ```bash
 python scripts/check_phase3_ready.py
 python scripts/check_p3_mock_safety_ready.py
+python scripts/check_p3_safety_pilot_ready.py
 ```

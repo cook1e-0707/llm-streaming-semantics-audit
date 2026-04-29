@@ -124,9 +124,14 @@ title = "Mock safety-signal harness"
 status = "done"
 
 [[phases.milestones]]
+id = "P3.M2b"
+title = "External safety prompt source"
+status = "done"
+
+[[phases.milestones]]
 id = "P3.M2"
 title = "Safety signal timing traces"
-status = "blocked"
+status = "next"
 
 [[phases.milestones]]
 id = "P3.M3"

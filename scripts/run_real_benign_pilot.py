@@ -136,8 +136,14 @@ def _run_openai_network_pilot(
         )
         recorder.extend(events)
         run_dir = args.output_dir / "openai_responses" / request.prompt_id / mode_name
-        trace_path = recorder.write_jsonl(run_dir / f"{request.trace_id}.jsonl")
-        summary_path = recorder.write_summary_json(run_dir / f"{request.trace_id}.summary.json")
+        trace_path = recorder.write_jsonl(
+            run_dir / f"{request.trace_id}.jsonl",
+            redact_content=True,
+        )
+        summary_path = recorder.write_summary_json(
+            run_dir / f"{request.trace_id}.summary.json",
+            redact_content=True,
+        )
         status = "ok" if validation.ok else "invalid"
         if not validation.ok:
             failures += 1

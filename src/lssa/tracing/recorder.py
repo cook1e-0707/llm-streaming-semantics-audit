@@ -144,20 +144,43 @@ class TraceRecorder:
             metadata={"event_count": len(self.events)},
         )
 
-    def write_jsonl(self, path: Path) -> Path:
+    def write_jsonl(self, path: Path, *, redact_content: bool = False) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", encoding="utf-8") as handle:
             for event in self.events:
-                handle.write(json.dumps(event.to_dict(), sort_keys=True) + "\n")
+                handle.write(
+                    json.dumps(_event_to_dict(event, redact_content), sort_keys=True)
+                    + "\n"
+                )
         return path
 
-    def write_summary_json(self, path: Path) -> Path:
+    def write_summary_json(self, path: Path, *, redact_content: bool = False) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
+        summary = self.summary().to_dict()
+        if redact_content:
+            for event in summary["events"]:
+                _redact_event_content(event)
+            summary["metadata"]["content_redacted"] = True
         path.write_text(
-            json.dumps(self.summary().to_dict(), indent=2, sort_keys=True),
+            json.dumps(summary, indent=2, sort_keys=True),
             encoding="utf-8",
         )
         return path
+
+
+def _event_to_dict(event: StreamEvent, redact_content: bool) -> dict[str, Any]:
+    data = event.to_dict()
+    if redact_content:
+        _redact_event_content(data)
+    return data
+
+
+def _redact_event_content(event: dict[str, Any]) -> None:
+    if event.get("content") is not None:
+        event["content"] = None
+        metadata = dict(event.get("metadata") or {})
+        metadata["content_redacted"] = True
+        event["metadata"] = metadata
 
 
 def _last_terminal_reason(events: list[StreamEvent]) -> TerminalReasonType | None:

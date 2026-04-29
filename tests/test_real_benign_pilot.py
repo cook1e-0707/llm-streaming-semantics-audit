@@ -1,3 +1,4 @@
+import json
 import shutil
 from pathlib import Path
 
@@ -77,6 +78,13 @@ def test_real_pilot_network_uses_injected_fake_client(monkeypatch, capsys) -> No
                 str(output_dir),
             ]
         )
+        trace_path = next(output_dir.rglob("*.jsonl"))
+        summary_path = next(output_dir.rglob("*.summary.json"))
+        trace_events = [
+            json.loads(line)
+            for line in trace_path.read_text(encoding="utf-8").splitlines()
+        ]
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -85,6 +93,9 @@ def test_real_pilot_network_uses_injected_fake_client(monkeypatch, capsys) -> No
     assert "status=ok" in captured.out
     assert "sk-not-printed" not in captured.out
     assert "sk-not-printed" not in captured.err
+    assert all(event["content"] is None for event in trace_events)
+    assert all(event["content"] is None for event in summary["events"])
+    assert summary["metadata"]["content_redacted"] is True
 
 
 def test_openai_streaming_mapping_from_fake_events() -> None:

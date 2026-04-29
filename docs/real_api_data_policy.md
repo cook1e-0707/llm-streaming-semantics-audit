@@ -22,7 +22,9 @@ are forbidden in Phase 2.
 
 Adapters should preserve raw event type names and concise payload summaries in
 event metadata. Full raw provider payloads are not required for Phase 2 and
-should be redacted by default.
+should be redacted by default. Real pilot artifacts also redact normalized text
+`content` by default; retain content only through an explicit future policy
+change.
 
 ## Artifact Retention
 

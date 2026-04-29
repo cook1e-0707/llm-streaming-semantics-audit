@@ -25,7 +25,7 @@ from lssa.adapters.aws_bedrock_converse import (
     AwsBedrockConverseClient,
 )
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
-from lssa.schema.events import ResponseMode
+from lssa.schema.events import EventType, ResponseMode, StreamEvent, TerminalReasonType
 from lssa.tracing.recorder import TraceRecorder
 from lssa.utils.aws_bedrock import (
     AWS_BEARER_TOKEN_BEDROCK_ENV,
@@ -43,7 +43,7 @@ SUPPORTED_PROVIDERS = {
 }
 DEFAULT_MODELS = {
     "anthropic_messages": "claude-haiku-4-5-20251001",
-    "aws_bedrock_converse": "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+    "aws_bedrock_converse": "amazon.nova-micro-v1:0",
     "openai_responses": "gpt-4.1-mini",
 }
 
@@ -186,8 +186,8 @@ def _run_openai_network_pilot(
             run_dir / f"{request.trace_id}.summary.json",
             redact_content=True,
         )
-        status = "ok" if validation.ok else "invalid"
-        if not validation.ok:
+        status = _pilot_status(events, validation.ok)
+        if status != "ok":
             failures += 1
         print(
             f"provider=openai_responses mode={mode_name} status={status} "
@@ -254,8 +254,8 @@ def _run_anthropic_network_pilot(
             run_dir / f"{request.trace_id}.summary.json",
             redact_content=True,
         )
-        status = "ok" if validation.ok else "invalid"
-        if not validation.ok:
+        status = _pilot_status(events, validation.ok)
+        if status != "ok":
             failures += 1
         print(
             f"provider=anthropic_messages mode={mode_name} status={status} "
@@ -323,8 +323,8 @@ def _run_bedrock_network_pilot(
             run_dir / f"{request.trace_id}.summary.json",
             redact_content=True,
         )
-        status = "ok" if validation.ok else "invalid"
-        if not validation.ok:
+        status = _pilot_status(events, validation.ok)
+        if status != "ok":
             failures += 1
         print(
             f"provider=aws_bedrock_converse mode={mode_name} status={status} "
@@ -402,6 +402,14 @@ def _response_mode(mode_name: str) -> ResponseMode:
     if mode_name == "nonstreaming":
         return ResponseMode.NON_STREAMING
     raise ValueError(f"unsupported mode: {mode_name}")
+
+
+def _pilot_status(events: list[StreamEvent], validation_ok: bool) -> str:
+    if any(event.event_type == EventType.ERROR for event in events):
+        return "error"
+    if any(event.terminal_reason == TerminalReasonType.ERROR for event in events):
+        return "error"
+    return "ok" if validation_ok else "invalid"
 
 
 def _model_for_provider(args: argparse.Namespace) -> str:

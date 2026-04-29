@@ -26,7 +26,8 @@ class AwsBedrockConverseClient:
     def stream_response(self, request: AdapterRequest) -> Iterable[Any]:
         client = self._client()
         response = client.converse_stream(**self._request_payload(request))
-        return response.get("stream", [])
+        for event in response.get("stream", []):
+            yield event
 
     def create_response(self, request: AdapterRequest) -> Any:
         client = self._client()

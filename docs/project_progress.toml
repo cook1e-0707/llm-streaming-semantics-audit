@@ -1,5 +1,5 @@
 current_phase = "P2"
-next_milestone = "P2.M3"
+next_milestone = "P2.M4"
 
 [status_labels]
 done = "done"
@@ -90,12 +90,12 @@ status = "done"
 [[phases.milestones]]
 id = "P2.M3"
 title = "Anthropic and Bedrock benign adapters"
-status = "in_progress"
+status = "done"
 
 [[phases.milestones]]
 id = "P2.M4"
 title = "Benign lifecycle comparison"
-status = "planned"
+status = "next"
 
 [[phases]]
 id = "P3"

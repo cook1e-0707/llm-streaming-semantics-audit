@@ -90,6 +90,43 @@ def test_bedrock_network_uses_injected_fake_client(monkeypatch, capsys) -> None:
     assert summary["metadata"]["content_redacted"] is True
 
 
+def test_bedrock_network_returns_failure_for_terminal_error_trace(monkeypatch, capsys) -> None:
+    class FailingClient:
+        def stream_response(self, request):
+            raise RuntimeError("provider failed")
+
+        def create_response(self, request):
+            raise RuntimeError("provider failed")
+
+    monkeypatch.setenv("AWS_BEARER_TOKEN_BEDROCK", "bearer-token-not-printed")
+    monkeypatch.setattr(
+        "scripts.run_real_benign_pilot.AwsBedrockConverseClient",
+        lambda **kwargs: FailingClient(),
+    )
+
+    output_dir = Path("artifacts/test_bedrock_failure")
+    shutil.rmtree(output_dir, ignore_errors=True)
+
+    try:
+        exit_code = main(
+            [
+                "--provider",
+                "aws_bedrock_converse",
+                "--allow-network",
+                "--output-dir",
+                str(output_dir),
+            ]
+        )
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "status=error" in captured.err
+    assert "bearer-token-not-printed" not in captured.out
+    assert "bearer-token-not-printed" not in captured.err
+
+
 def test_bedrock_streaming_mapping_from_fake_events() -> None:
     request = AdapterRequest(
         trace_id="fake-bedrock-streaming",

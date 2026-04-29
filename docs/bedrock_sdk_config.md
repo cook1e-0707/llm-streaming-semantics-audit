@@ -45,7 +45,13 @@ src/lssa/adapters/aws_bedrock_converse.py
 ```
 
 It uses Boto3 Bedrock Runtime `converse` and `converse_stream` for benign
-raw-provider lifecycle traces.
+raw-provider lifecycle traces. The default benign pilot model is
+`amazon.nova-micro-v1:0` because it is a lightweight AWS-hosted model suitable
+for harness validation.
+
+Anthropic models on Bedrock may require AWS account-level use-case details to
+be submitted and approved before use. That access requirement is separate from
+the LSSA adapter and should not be treated as a trace-harness failure.
 
 ## Phase Boundary
 

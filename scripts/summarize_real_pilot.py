@@ -25,6 +25,8 @@ from lssa.tracing.validator import validate_trace
 
 DEFAULT_ARTIFACTS_DIR = Path("artifacts/real_pilot")
 DEFAULT_OUTPUTS = {
+    "anthropic_messages": Path("docs/pilot_runs/anthropic_messages_benign_pilot.md"),
+    "aws_bedrock_converse": Path("docs/pilot_runs/aws_bedrock_converse_benign_pilot.md"),
     "openai_responses": Path("docs/pilot_runs/openai_responses_benign_pilot.md"),
 }
 SUPPORTED_PROVIDERS = set(DEFAULT_OUTPUTS)
@@ -36,6 +38,7 @@ class PilotTraceRow:
     provider: str
     prompt_id: str
     mode: str
+    model: str
     trace_id: str
     started_at_utc: str
     valid: bool
@@ -136,7 +139,7 @@ def render_markdown(
         "",
         "## Status",
         "",
-        f"- Phase: P2.M2a OpenAI benign pilot result consolidation",
+        "- Phase: P2 real benign pilot result consolidation",
         f"- Provider: `{provider}`",
         f"- Latest trace start: `{latest_started}`",
         f"- Trace validity: `{_yes_no(all_valid)}`",
@@ -152,8 +155,8 @@ def render_markdown(
         "",
         "## Latest Trace Summary",
         "",
-        "| Prompt | Mode | Valid | Events | Chunks | Final chars | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for row in rows:
         lines.append(
@@ -162,6 +165,7 @@ def render_markdown(
                 [
                     f"`{row.prompt_id}`",
                     f"`{row.mode}`",
+                    f"`{row.model}`",
                     _yes_no(row.valid),
                     str(row.event_count),
                     str(row.chunk_count),
@@ -208,6 +212,7 @@ def _row_from_events(
         prompt_id=prompt_id,
         mode=mode,
         trace_id=trace_id,
+        model=_model(events),
         started_at_utc=_started_at_utc(events),
         valid=validation.ok,
         validation_errors=validation.errors,
@@ -242,6 +247,14 @@ def _started_at_utc(events: list[StreamEvent]) -> str:
     return "unknown"
 
 
+def _model(events: list[StreamEvent]) -> str:
+    for event in events:
+        value = event.metadata.get("model")
+        if isinstance(value, str) and value:
+            return value
+    return "unknown"
+
+
 def _normalize_iso_datetime(value: str) -> str:
     try:
         parsed = datetime.fromisoformat(value)
@@ -271,6 +284,10 @@ def _terminal_reason(events: list[StreamEvent]) -> str:
 
 
 def _provider_title(provider: str) -> str:
+    if provider == "anthropic_messages":
+        return "Anthropic Messages"
+    if provider == "aws_bedrock_converse":
+        return "AWS Bedrock Converse"
     if provider == "openai_responses":
         return "OpenAI Responses"
     return provider

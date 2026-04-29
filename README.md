@@ -38,9 +38,8 @@ templates, and legacy inventory.
 Phase 1 is complete: the provider documentation evidence registry, generated
 provider matrix, unknown-field review, and readiness quality gate are in place.
 Phase 2 has a provider-neutral mock trace harness and a redacted OpenAI
-Responses benign pilot summary. P2.M3 is implementing Anthropic and AWS Bedrock
-benign adapter paths, still defaulting to dry-run with explicit `--allow-network`
-for real provider calls.
+Responses, Anthropic Messages, and AWS Bedrock Converse benign pilot summaries.
+The next step is P2.M4 benign lifecycle comparison across raw provider traces.
 
 ## Project Progress
 
@@ -51,7 +50,7 @@ README by `python scripts/update_readme_status.py`.
 ```text
 Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
 Current phase: P2
-Next milestone: P2.M3
+Next milestone: P2.M4
 
 |-- [done] P0 Research Contract and Measurement Schema
 |   |-- [done] P0.M1 Repository scaffold
@@ -68,8 +67,8 @@ Next milestone: P2.M3
 |-- [in_progress] P2 Raw API Benign Pilot
 |   |-- [done] P2.M1 Provider adapter interface
 |   |-- [done] P2.M2 OpenAI benign pilot and summary
-|   |-- [in_progress] P2.M3 Anthropic and Bedrock benign adapters
-|   `-- [planned] P2.M4 Benign lifecycle comparison
+|   |-- [done] P2.M3 Anthropic and Bedrock benign adapters
+|   `-- [next] P2.M4 Benign lifecycle comparison
 |-- [deferred] P3 Safety-Signal Pilot
 |   |-- [planned] P3.M1 Redacted prompt policy
 |   |-- [planned] P3.M2 Safety signal timing traces
@@ -113,6 +112,8 @@ Out of scope for the initial phase:
 - Phase 2 real pilot plan: `docs/phase2_real_pilot_plan.md`
 - AWS Bedrock SDK configuration: `docs/bedrock_sdk_config.md`
 - OpenAI benign pilot summary: `docs/pilot_runs/openai_responses_benign_pilot.md`
+- Anthropic benign pilot summary: `docs/pilot_runs/anthropic_messages_benign_pilot.md`
+- AWS Bedrock benign pilot summary: `docs/pilot_runs/aws_bedrock_converse_benign_pilot.md`
 - Trace contract: `docs/trace_contract.md`
 - Benign pilot policy: `docs/benign_pilot_policy.md`
 - Real API data policy: `docs/real_api_data_policy.md`
@@ -126,6 +127,8 @@ Out of scope for the initial phase:
 llm-streaming-semantics-audit/
 |-- docs/
 |   |-- pilot_runs/
+|   |   |-- anthropic_messages_benign_pilot.md
+|   |   |-- aws_bedrock_converse_benign_pilot.md
 |   |   `-- openai_responses_benign_pilot.md
 |   |-- source_notes/
 |   |   |-- anthropic.md

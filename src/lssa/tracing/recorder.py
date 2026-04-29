@@ -147,7 +147,10 @@ class TraceRecorder:
             events=list(self.events),
             terminal_reason=terminal_reason,
             settled=settled,
-            metadata={"event_count": len(self.events)},
+            metadata={
+                "event_count": len(self.events),
+                "safety_signal_count": _safety_signal_count(self.events),
+            },
         )
 
     def write_jsonl(self, path: Path, *, redact_content: bool = False) -> Path:
@@ -194,3 +197,16 @@ def _last_terminal_reason(events: list[StreamEvent]) -> TerminalReasonType | Non
         if event.terminal_reason is not None:
             return event.terminal_reason
     return None
+
+
+def _safety_signal_count(events: list[StreamEvent]) -> int:
+    safety_event_types = {
+        EventType.SAFETY_ANNOTATION,
+        EventType.REFUSAL,
+        EventType.CONTENT_FILTER,
+    }
+    return sum(
+        1
+        for event in events
+        if event.event_type in safety_event_types or event.safety_signal is not None
+    )

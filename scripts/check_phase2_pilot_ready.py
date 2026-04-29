@@ -45,6 +45,7 @@ ALLOWED_ADAPTER_FILES = {
     "base.py",
     "mock.py",
     "openai_responses.py",
+    "safety_mapping.py",
 }
 REQUIRED_DOCS = {
     "docs/benign_pilot_policy.md",

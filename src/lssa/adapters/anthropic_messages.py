@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from lssa.adapters.base import AdapterRequest
+from lssa.adapters.safety_mapping import append_provider_safety_signal
 from lssa.schema.events import EventType, ResponseMode, StreamEvent, TerminalReasonType
 from lssa.tracing.recorder import TraceRecorder
 
@@ -76,6 +77,7 @@ class AnthropicMessagesAdapter:
             EventType.REQUEST_START,
             raw_event_type="lssa.request_start",
             payload_summary="request accepted by local harness",
+            metadata=_request_metadata(request),
         )
         recorder.append(
             EventType.REQUEST_SENT,
@@ -106,6 +108,13 @@ class AnthropicMessagesAdapter:
             EventType.FIRST_BYTE,
             raw_event_type="message.completed",
             payload_summary="non-streaming response received",
+        )
+        append_provider_safety_signal(
+            recorder,
+            provider_stop_reason,
+            terminal_reason=_terminal_reason_from_provider_stop(provider_stop_reason),
+            raw_event_type="message.completed",
+            payload_summary="Anthropic non-streaming provider safety terminal signal",
         )
         recorder.append(
             EventType.FINAL_RESPONSE,
@@ -138,6 +147,7 @@ class AnthropicMessagesAdapter:
             EventType.REQUEST_START,
             raw_event_type="lssa.request_start",
             payload_summary="request accepted by local harness",
+            metadata=_request_metadata(request),
         )
         recorder.append(
             EventType.REQUEST_SENT,
@@ -190,6 +200,13 @@ class AnthropicMessagesAdapter:
                     EventType.STREAM_END,
                     raw_event_type=raw_type,
                     payload_summary="Anthropic message_stop event",
+                )
+                append_provider_safety_signal(
+                    recorder,
+                    provider_stop_reason,
+                    terminal_reason=_terminal_reason_from_provider_stop(provider_stop_reason),
+                    raw_event_type=raw_type,
+                    payload_summary="Anthropic streaming provider safety terminal signal",
                 )
                 recorder.append(
                     EventType.FINAL_RESPONSE,
@@ -256,6 +273,7 @@ class AnthropicMessagesAdapter:
             EventType.REQUEST_START,
             raw_event_type="lssa.request_start",
             payload_summary="request accepted by local harness",
+            metadata=_request_metadata(request),
         )
         recorder.append(
             EventType.REQUEST_SENT,
@@ -269,6 +287,13 @@ class AnthropicMessagesAdapter:
         )
         content = _response_text(raw_response)
         provider_stop_reason = _stop_reason(raw_response)
+        append_provider_safety_signal(
+            recorder,
+            provider_stop_reason,
+            terminal_reason=_terminal_reason_from_provider_stop(provider_stop_reason),
+            raw_event_type="message.completed",
+            payload_summary="Anthropic non-streaming provider safety terminal signal",
+        )
         recorder.append(
             EventType.FINAL_RESPONSE,
             content=content,
@@ -303,6 +328,10 @@ def _recorder_for_request(
         model=request.model,
         response_mode=request.response_mode,
     )
+
+
+def _request_metadata(request: AdapterRequest) -> dict[str, str]:
+    return {"prompt_id": request.prompt_id, **request.metadata}
 
 
 def _raw_event_type(raw_event: Any) -> str:

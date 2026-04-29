@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -145,6 +146,55 @@ def iter_safety_prompt_records(
             if limit is not None and len(records) >= limit:
                 return records
     return records
+
+
+def stratified_safety_prompt_records(
+    root: Path | None = None,
+    *,
+    include_text: bool = False,
+    limit: int | None = None,
+    source_glob: str = "*.jsonl",
+    include_attack_prompt_files: bool = True,
+    seed: int = 0,
+    strata_fields: tuple[str, ...] = ("benchmark", "category"),
+) -> list[SafetyPromptRecord]:
+    """Return safety prompt records using deterministic round-robin strata.
+
+    This helper still leaves raw prompt text outside the repository. Text is
+    loaded only when ``include_text`` is explicitly true.
+    """
+
+    records = iter_safety_prompt_records(
+        root,
+        include_text=include_text,
+        limit=None,
+        source_glob=source_glob,
+        include_attack_prompt_files=include_attack_prompt_files,
+    )
+    if limit is None or len(records) <= limit:
+        return records
+
+    rng = random.Random(seed)
+    groups: dict[tuple[str, ...], list[SafetyPromptRecord]] = {}
+    for record in records:
+        key = tuple(str(getattr(record, field_name, "unknown")) for field_name in strata_fields)
+        groups.setdefault(key, []).append(record)
+
+    for group_records in groups.values():
+        rng.shuffle(group_records)
+
+    selected: list[SafetyPromptRecord] = []
+    active_keys = sorted(groups)
+    while active_keys and len(selected) < limit:
+        next_active_keys: list[tuple[str, ...]] = []
+        for key in active_keys:
+            group_records = groups[key]
+            if group_records and len(selected) < limit:
+                selected.append(group_records.pop(0))
+            if group_records:
+                next_active_keys.append(key)
+        active_keys = next_active_keys
+    return selected
 
 
 def _iter_jsonl(path: Path) -> list[dict[str, Any]]:

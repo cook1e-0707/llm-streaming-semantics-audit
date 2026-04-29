@@ -6,7 +6,7 @@ from pathlib import Path
 from lssa.adapters.aws_bedrock_converse import AwsBedrockConverseAdapter
 from lssa.adapters.base import AdapterRequest
 from lssa.schema.events import EventType, ResponseMode, TerminalReasonType
-from lssa.schema.metrics import time_to_first_byte_ms
+from lssa.schema.metrics import time_to_first_byte_ms, time_to_first_safety_signal_ms
 from lssa.tracing.validator import validate_trace
 from scripts.run_real_benign_pilot import main
 
@@ -247,6 +247,40 @@ def test_bedrock_content_filtered_maps_to_content_filter_terminal_reason() -> No
     )
 
     assert validate_trace(events).ok
+    safety_event = next(event for event in events if event.event_type == EventType.CONTENT_FILTER)
+    assert safety_event.safety_signal is not None
+    assert safety_event.safety_signal.is_terminal is True
+    assert safety_event.metadata["provider_stop_reason"] == "content_filtered"
+    assert safety_event.terminal_reason == TerminalReasonType.CONTENT_FILTER
+    assert time_to_first_safety_signal_ms(events) is not None
+    assert events[-1].terminal_reason == TerminalReasonType.CONTENT_FILTER
+
+
+def test_bedrock_guardrail_intervened_maps_to_content_filter_event() -> None:
+    request = AdapterRequest(
+        trace_id="fake-bedrock-guardrail",
+        prompt_id="safety-test",
+        prompt="redacted safety prompt",
+        response_mode=ResponseMode.STREAMING,
+        model="fake-model",
+    )
+    adapter = AwsBedrockConverseAdapter()
+
+    events = adapter.map_streaming_events(
+        request,
+        [
+            {"messageStart": {"role": "assistant"}},
+            {"messageStop": {"stopReason": "guardrail_intervened"}},
+        ],
+    )
+
+    assert validate_trace(events).ok
+    safety_event = next(event for event in events if event.event_type == EventType.CONTENT_FILTER)
+    assert safety_event.safety_signal is not None
+    assert safety_event.safety_signal.is_terminal is True
+    assert safety_event.metadata["provider_stop_reason"] == "guardrail_intervened"
+    assert safety_event.terminal_reason == TerminalReasonType.CONTENT_FILTER
+    assert time_to_first_safety_signal_ms(events) is not None
     assert events[-1].terminal_reason == TerminalReasonType.CONTENT_FILTER
 
 

@@ -39,6 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prompt-root", type=Path)
     parser.add_argument("--source-glob", default="*.jsonl")
     parser.add_argument("--limit-per-provider-mode", type=int, default=10)
+    parser.add_argument("--sample-strategy", choices=["first", "stratified"], default="first")
+    parser.add_argument("--sample-seed", type=int, default=0)
     parser.add_argument("--judge-limit", type=int, default=10)
     parser.add_argument("--judge-profile", choices=SUPPORTED_JUDGE_PROFILES, default="all")
     parser.add_argument("--judge-responses", action="store_true")
@@ -145,6 +147,10 @@ def _safety_command(
         args.source_glob,
         "--limit",
         str(args.limit_per_provider_mode),
+        "--sample-strategy",
+        args.sample_strategy,
+        "--sample-seed",
+        str(args.sample_seed),
         "--max-calls",
         str(args.limit_per_provider_mode),
         "--max-output-tokens",
@@ -196,6 +202,10 @@ def _judge_command(args: argparse.Namespace, run_root: Path) -> list[str]:
         args.source_glob,
         "--limit",
         str(args.judge_limit),
+        "--sample-strategy",
+        args.sample_strategy,
+        "--sample-seed",
+        str(args.sample_seed),
         "--max-calls",
         str(judge_calls),
         "--judge-profile",
@@ -248,6 +258,8 @@ def _write_manifest(
         "providers": providers,
         "modes": modes,
         "source_glob": args.source_glob,
+        "sample_strategy": args.sample_strategy,
+        "sample_seed": args.sample_seed,
         "limit_per_provider_mode": args.limit_per_provider_mode,
         "judge_limit": args.judge_limit,
         "judge_profile": args.judge_profile,
@@ -284,12 +296,15 @@ def _write_summary(run_root: Path) -> Path:
         "terminal_reasons": {},
         "provider_stop_reasons": {},
         "event_type_counts": {},
+        "safety_signal_event_count": 0,
+        "safety_signal_event_types": {},
         "judge_labels": {},
         "response_judge_labels": {},
     }
     terminal_reasons: Counter[str] = Counter()
     provider_stop_reasons: Counter[str] = Counter()
     event_type_counts: Counter[str] = Counter()
+    safety_signal_event_types: Counter[str] = Counter()
     judge_labels: Counter[str] = Counter()
     response_judge_labels: Counter[str] = Counter()
 
@@ -304,6 +319,9 @@ def _write_summary(run_root: Path) -> Path:
             if not isinstance(event, dict):
                 continue
             event_type_counts[str(event.get("event_type") or "unknown")] += 1
+            event_type = str(event.get("event_type") or "unknown")
+            if event_type in {"safety_annotation", "refusal", "content_filter"}:
+                safety_signal_event_types[event_type] += 1
             if event.get("event_type") == "final_response":
                 metadata = event.get("metadata") or {}
                 if isinstance(metadata, dict):
@@ -328,6 +346,8 @@ def _write_summary(run_root: Path) -> Path:
     summary["terminal_reasons"] = dict(sorted(terminal_reasons.items()))
     summary["provider_stop_reasons"] = dict(sorted(provider_stop_reasons.items()))
     summary["event_type_counts"] = dict(sorted(event_type_counts.items()))
+    summary["safety_signal_event_count"] = sum(safety_signal_event_types.values())
+    summary["safety_signal_event_types"] = dict(sorted(safety_signal_event_types.items()))
     summary["judge_labels"] = dict(sorted(judge_labels.items()))
     summary["response_judge_labels"] = dict(sorted(response_judge_labels.items()))
     path = run_root / "p3_overnight_summary.json"

@@ -5,6 +5,7 @@ from lssa.prompts.safety_external import (
     SafetyPromptRecord,
     inventory_safety_prompt_root,
     iter_safety_prompt_records,
+    stratified_safety_prompt_records,
 )
 from lssa.schema.events import EventType, Layer, StreamEvent
 from scripts.check_p3_safety_pilot_ready import check_p3_safety_pilot_ready, main as check_main
@@ -32,6 +33,21 @@ def test_external_safety_loader_can_load_text_only_when_requested(tmp_path: Path
 
     assert redacted[0].prompt_text is None
     assert loaded[0].prompt_text == "redacted test prompt body"
+
+
+def test_stratified_safety_loader_balances_categories(tmp_path: Path) -> None:
+    _write_multiple_safety_jsonl(tmp_path / "sample.jsonl")
+
+    first_records = iter_safety_prompt_records(tmp_path, include_text=False, limit=2)
+    stratified_records = stratified_safety_prompt_records(
+        tmp_path,
+        include_text=False,
+        limit=2,
+        seed=7,
+    )
+
+    assert [record.category for record in first_records] == ["alpha", "alpha"]
+    assert sorted(record.category for record in stratified_records) == ["alpha", "beta"]
 
 
 def test_inspect_external_safety_prompts_does_not_print_prompt_text(
@@ -74,6 +90,35 @@ def test_safety_signal_pilot_dry_run_writes_redacted_plan(tmp_path: Path) -> Non
     serialized = json.dumps(payload)
     assert payload["raw_text_in_plan"] is False
     assert "redacted test prompt body" not in serialized
+
+
+def test_safety_signal_pilot_can_target_prompt_ids(tmp_path: Path) -> None:
+    prompt_root = tmp_path / "source"
+    plan_dir = Path("artifacts/test_safety_signal_targeted_plan")
+    _write_multiple_safety_jsonl(prompt_root / "sample.jsonl")
+
+    exit_code = pilot_main(
+        [
+            "--provider",
+            "openai_responses",
+            "--prompt-root",
+            str(prompt_root),
+            "--prompt-id",
+            "safety-beta-1",
+            "--limit",
+            "1",
+            "--max-calls",
+            "1",
+            "--plan-dir",
+            str(plan_dir),
+        ]
+    )
+
+    assert exit_code == 0
+    plan_path = sorted(plan_dir.glob("*.json"))[-1]
+    payload = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert payload["prompt_ids"] == ["safety-beta-1"]
+    assert [record["prompt_id"] for record in payload["records"]] == ["safety-beta-1"]
 
 
 def test_safety_signal_pilot_requires_safety_opt_in_for_network(
@@ -257,5 +302,43 @@ def _write_safety_jsonl(path: Path) -> None:
             }
         )
         + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_multiple_safety_jsonl(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {
+            "prompt_id": "safety-alpha-1",
+            "prompt": "redacted alpha prompt one",
+            "benchmark": "unit_test",
+            "semantic_category": "alpha",
+            "language": "en",
+        },
+        {
+            "prompt_id": "safety-alpha-2",
+            "prompt": "redacted alpha prompt two",
+            "benchmark": "unit_test",
+            "semantic_category": "alpha",
+            "language": "en",
+        },
+        {
+            "prompt_id": "safety-beta-1",
+            "prompt": "redacted beta prompt one",
+            "benchmark": "unit_test",
+            "semantic_category": "beta",
+            "language": "en",
+        },
+        {
+            "prompt_id": "safety-beta-2",
+            "prompt": "redacted beta prompt two",
+            "benchmark": "unit_test",
+            "semantic_category": "beta",
+            "language": "en",
+        },
+    ]
+    path.write_text(
+        "\n".join(json.dumps(row, sort_keys=True) for row in rows) + "\n",
         encoding="utf-8",
     )

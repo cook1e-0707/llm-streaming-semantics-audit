@@ -9,7 +9,7 @@ from lssa.adapters.anthropic_messages import (
 )
 from lssa.adapters.base import AdapterRequest
 from lssa.schema.events import EventType, ResponseMode, TerminalReasonType
-from lssa.schema.metrics import time_to_first_byte_ms
+from lssa.schema.metrics import time_to_first_byte_ms, time_to_first_safety_signal_ms
 from lssa.tracing.validator import validate_trace
 from scripts.run_real_benign_pilot import main
 
@@ -240,6 +240,38 @@ def test_anthropic_stop_sequence_maps_to_stop_terminal_reason() -> None:
 
     assert validate_trace(events).ok
     assert events[-1].terminal_reason == TerminalReasonType.STOP
+
+
+def test_anthropic_refusal_maps_to_safety_signal_event() -> None:
+    request = AdapterRequest(
+        trace_id="fake-anthropic-refusal",
+        prompt_id="safety-test",
+        prompt="redacted safety prompt",
+        response_mode=ResponseMode.STREAMING,
+        model="fake-model",
+    )
+    adapter = AnthropicMessagesAdapter()
+
+    events = adapter.map_streaming_events(
+        request,
+        [
+            {"type": "message_start"},
+            {
+                "type": "message_delta",
+                "delta": {"stop_reason": "refusal"},
+            },
+            {"type": "message_stop"},
+        ],
+    )
+
+    assert validate_trace(events).ok
+    safety_event = next(event for event in events if event.event_type == EventType.REFUSAL)
+    assert safety_event.safety_signal is not None
+    assert safety_event.safety_signal.is_terminal is True
+    assert safety_event.metadata["provider_stop_reason"] == "refusal"
+    assert safety_event.terminal_reason == TerminalReasonType.REFUSAL
+    assert time_to_first_safety_signal_ms(events) is not None
+    assert events[-1].terminal_reason == TerminalReasonType.REFUSAL
 
 
 def test_anthropic_nonstreaming_run_measures_client_latency() -> None:

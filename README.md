@@ -192,6 +192,7 @@ llm-streaming-semantics-audit/
 |   |-- stop_reason_probe_plan.md
 |   `-- trace_contract.md
 |-- scripts/
+|   |-- audit_p3_results.py
 |   |-- check_judge_ready.py
 |   |-- check_p3_mock_safety_ready.py
 |   |-- check_p3_safety_pilot_ready.py
@@ -222,7 +223,8 @@ llm-streaming-semantics-audit/
 |       |   |-- aws_bedrock_converse.py
 |       |   |-- base.py
 |       |   |-- mock.py
-|       |   `-- openai_responses.py
+|       |   |-- openai_responses.py
+|       |   `-- safety_mapping.py
 |       |-- experiments/
 |       |   |-- __init__.py
 |       |   `-- manifest.py
@@ -260,6 +262,7 @@ llm-streaming-semantics-audit/
 |   |-- test_mock_safety_pilot.py
 |   |-- test_nvidia_judge.py
 |   |-- test_p3_overnight_batch.py
+|   |-- test_p3_result_audit.py
 |   |-- test_p3_run_summary.py
 |   |-- test_phase1_quality_gate.py
 |   |-- test_phase2_pilot_ready.py

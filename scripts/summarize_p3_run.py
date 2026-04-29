@@ -72,6 +72,7 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
     terminal_reasons: Counter[str] = Counter()
     provider_stop_reasons: Counter[str] = Counter()
     safety_signal_types: Counter[str] = Counter()
+    safety_signal_event_types: Counter[str] = Counter()
     metric_values: dict[str, list[float]] = defaultdict(list)
     chunk_interarrival_ms: list[float] = []
     first_chunk_after_request_sent_ms: list[float] = []
@@ -99,6 +100,12 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
                 terminal_reasons[event.terminal_reason.value] += 1
             if event.safety_signal is not None:
                 safety_signal_types[event.safety_signal.signal_type.value] += 1
+            if event.event_type in {
+                EventType.SAFETY_ANNOTATION,
+                EventType.REFUSAL,
+                EventType.CONTENT_FILTER,
+            }:
+                safety_signal_event_types[event.event_type.value] += 1
             if event.event_type == EventType.FINAL_RESPONSE:
                 provider_stop_reasons[str(event.metadata.get("provider_stop_reason") or "unknown")] += 1
 
@@ -157,6 +164,8 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
         "event_type_counts": dict(sorted(event_type_counts.items())),
         "terminal_reasons": dict(sorted(terminal_reasons.items())),
         "provider_stop_reasons": dict(sorted(provider_stop_reasons.items())),
+        "safety_signal_event_count": sum(safety_signal_event_types.values()),
+        "safety_signal_event_types": dict(sorted(safety_signal_event_types.items())),
         "safety_signal_types": dict(sorted(safety_signal_types.items())),
         "metrics": {name: _aggregate(values) for name, values in sorted(metric_values.items())},
         "chunk_latency": {

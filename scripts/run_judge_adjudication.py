@@ -20,7 +20,11 @@ from lssa.judging.nvidia import (
     NvidiaGuardJudge,
     NvidiaJudgeConfig,
 )
-from lssa.prompts.safety_external import iter_safety_prompt_records, resolve_safety_prompt_root
+from lssa.prompts.safety_external import (
+    iter_safety_prompt_records,
+    resolve_safety_prompt_root,
+    stratified_safety_prompt_records,
+)
 
 DEFAULT_PLAN_DIR = Path("artifacts/judge_plans")
 DEFAULT_OUTPUT_DIR = Path("artifacts/judge_adjudication")
@@ -32,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prompt-root", type=Path)
     parser.add_argument("--source-glob", default="*.jsonl")
     parser.add_argument("--limit", type=int, default=1)
+    parser.add_argument("--sample-strategy", choices=["first", "stratified"], default="first")
+    parser.add_argument("--sample-seed", type=int, default=0)
     parser.add_argument("--max-calls", type=int, default=1)
     parser.add_argument("--judge-profile", choices=JUDGE_PROFILE_CHOICES, default="a")
     parser.add_argument("--allow-judge-network", action="store_true")
@@ -58,11 +64,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         root = resolve_safety_prompt_root(args.prompt_root)
-        records = iter_safety_prompt_records(
+        loader = (
+            stratified_safety_prompt_records
+            if args.sample_strategy == "stratified"
+            else iter_safety_prompt_records
+        )
+        loader_kwargs = {
+            "include_text": include_text,
+            "limit": args.limit,
+            "source_glob": args.source_glob,
+        }
+        if args.sample_strategy == "stratified":
+            loader_kwargs["seed"] = args.sample_seed
+        records = loader(
             root,
-            include_text=include_text,
-            limit=args.limit,
-            source_glob=args.source_glob,
+            **loader_kwargs,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(str(exc), file=sys.stderr)
@@ -167,6 +183,9 @@ def _write_plan(
             for config in configs
         ],
         "prompt_root": str(root),
+        "source_glob": args.source_glob,
+        "sample_strategy": args.sample_strategy,
+        "sample_seed": args.sample_seed,
         "planned_calls": planned_calls,
         "allow_judge_network": args.allow_judge_network,
         "allow_safety_prompts": args.allow_safety_prompts,

@@ -6,7 +6,7 @@ from pathlib import Path
 from lssa.adapters.base import AdapterRequest
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
 from lssa.schema.events import EventType, ResponseMode, TerminalReasonType
-from lssa.schema.metrics import time_to_first_byte_ms
+from lssa.schema.metrics import time_to_first_byte_ms, time_to_first_safety_signal_ms
 from lssa.tracing.validator import validate_trace
 from scripts.run_real_benign_pilot import (
     load_benign_prompts,
@@ -234,6 +234,35 @@ def test_openai_max_output_tokens_maps_to_length_terminal_reason() -> None:
     final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
     assert final_response.metadata["provider_stop_reason"] == "max_output_tokens"
     assert events[-1].terminal_reason == TerminalReasonType.LENGTH
+
+
+def test_openai_content_filtered_maps_to_safety_signal_event() -> None:
+    request = AdapterRequest(
+        trace_id="fake-openai-filtered",
+        prompt_id="safety-test",
+        prompt="redacted safety prompt",
+        response_mode=ResponseMode.NON_STREAMING,
+        model="fake-model",
+    )
+    adapter = OpenAIResponsesAdapter()
+
+    events = adapter.map_nonstreaming_response(
+        request,
+        {
+            "output_text": "",
+            "status": "incomplete",
+            "incomplete_details": {"reason": "content_filtered"},
+        },
+    )
+
+    assert validate_trace(events).ok
+    safety_event = next(event for event in events if event.event_type == EventType.CONTENT_FILTER)
+    assert safety_event.safety_signal is not None
+    assert safety_event.safety_signal.is_terminal is True
+    assert safety_event.metadata["provider_stop_reason"] == "content_filtered"
+    assert safety_event.terminal_reason == TerminalReasonType.CONTENT_FILTER
+    assert time_to_first_safety_signal_ms(events) is not None
+    assert events[-1].terminal_reason == TerminalReasonType.CONTENT_FILTER
 
 
 def test_openai_nonstreaming_run_measures_client_latency() -> None:

@@ -31,6 +31,7 @@ from lssa.prompts.safety_external import (
     SafetyPromptRecord,
     iter_safety_prompt_records,
     resolve_safety_prompt_root,
+    stratified_safety_prompt_records,
 )
 from lssa.schema.events import EventType, ResponseMode, StreamEvent, TerminalReasonType
 from lssa.tracing.recorder import TraceRecorder
@@ -61,7 +62,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model")
     parser.add_argument("--prompt-root", type=Path)
     parser.add_argument("--source-glob", default="*.jsonl")
+    parser.add_argument("--prompt-id", action="append", default=[])
+    parser.add_argument("--prompt-id-file", type=Path)
     parser.add_argument("--limit", type=int, default=1)
+    parser.add_argument("--sample-strategy", choices=["first", "stratified"], default="first")
+    parser.add_argument("--sample-seed", type=int, default=0)
     parser.add_argument("--max-calls", type=int, default=1)
     parser.add_argument("--max-output-tokens", type=int, default=512)
     parser.add_argument("--timeout-seconds", type=int, default=60)
@@ -108,16 +113,30 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         root = resolve_safety_prompt_root(args.prompt_root)
-        records = iter_safety_prompt_records(
-            root,
-            include_text=(
+        selected_prompt_ids = _selected_prompt_ids(args)
+        loader = (
+            stratified_safety_prompt_records
+            if args.sample_strategy == "stratified"
+            else iter_safety_prompt_records
+        )
+        loader_kwargs = {
+            "include_text": (
                 args.allow_network
                 and args.allow_safety_prompts
                 and args.reviewed_source
             ),
-            limit=args.limit,
-            source_glob=args.source_glob,
+            "limit": None if selected_prompt_ids else args.limit,
+            "source_glob": args.source_glob,
+        }
+        if args.sample_strategy == "stratified":
+            loader_kwargs["seed"] = args.sample_seed
+        records = loader(
+            root,
+            **loader_kwargs,
         )
+        if selected_prompt_ids:
+            records = [record for record in records if record.prompt_id in selected_prompt_ids]
+            records = records[: args.limit]
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -249,6 +268,11 @@ def _write_redacted_plan(
         "mode": args.mode,
         "model": _model_for_provider(args),
         "prompt_root": str(root),
+        "source_glob": args.source_glob,
+        "prompt_ids": sorted(_selected_prompt_ids(args)),
+        "prompt_id_file": str(args.prompt_id_file) if args.prompt_id_file else None,
+        "sample_strategy": args.sample_strategy,
+        "sample_seed": args.sample_seed,
         "planned_calls": len(records),
         "max_output_tokens": args.max_output_tokens,
         "timeout_seconds": args.timeout_seconds,
@@ -306,6 +330,18 @@ def _adapter_for_provider(args: argparse.Namespace):
             )
         )
     raise RuntimeError(f"unsupported provider: {args.provider}")
+
+
+def _selected_prompt_ids(args: argparse.Namespace) -> set[str]:
+    selected = set(args.prompt_id or [])
+    if args.prompt_id_file is None:
+        return selected
+    with args.prompt_id_file.open(encoding="utf-8") as handle:
+        for line in handle:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                selected.add(stripped)
+    return selected
 
 
 def _response_mode(mode_name: str) -> ResponseMode:

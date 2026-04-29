@@ -58,6 +58,7 @@ def test_trace_recorder_writes_jsonl_and_summary(tmp_path) -> None:
     assert json.loads(trace_lines[0])["trace_id"] == "trace-write"
     assert summary["settled"] is True
     assert summary["metadata"]["event_count"] == 6
+    assert summary["metadata"]["safety_signal_count"] == 0
 
 
 def test_trace_recorder_can_redact_content_on_write(tmp_path) -> None:

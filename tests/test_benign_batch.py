@@ -30,8 +30,8 @@ def test_stop_reason_probe_manifest_uses_larger_bounded_output_budget() -> None:
     runs = build_planned_runs(manifest)
 
     assert len(runs) == 6
-    assert manifest.max_output_tokens == 2048
-    assert manifest.timeout_seconds == 120
+    assert manifest.max_output_tokens == 12048
+    assert manifest.timeout_seconds == 900
     assert {run.prompt_id for run in runs} == {"stop_reason_probe_long_generation"}
 
 

@@ -23,12 +23,17 @@ The example manifest plans six calls:
 - 1 benign stop-reason prompt
 - 1 repetition
 
-The output budget is intentionally higher than the ordinary pilot:
+The output budget is intentionally much higher than the ordinary pilot but
+still finite:
 
 ```text
-max_output_tokens = 2048
-timeout_seconds = 120
+max_output_tokens = 12048
+timeout_seconds = 900
 ```
+
+Some provider/model combinations may reject this value if it exceeds the
+configured model limit. Treat that as configuration evidence, not as a model
+behavior result, and lower the per-run budget before interpreting stop reasons.
 
 ## Dry Run
 

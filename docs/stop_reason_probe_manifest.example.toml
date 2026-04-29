@@ -12,7 +12,7 @@ modes = [
   "nonstreaming",
 ]
 repetitions = 1
-max_output_tokens = 2048
-timeout_seconds = 120
+max_output_tokens = 12048
+timeout_seconds = 900
 temperature = 0.0
 max_total_calls_without_force = 6

@@ -67,6 +67,8 @@ Do not introduce safety prompts as part of benign scale-up.
 
 Use `docs/stop_reason_probe_manifest.example.toml` when the goal is to observe
 provider terminal semantics under a larger benign output budget. The probe uses
-`max_output_tokens = 2048`, a longer timeout, and a finite benign prompt. It is
-still dry-run by default and must be run with explicit `--allow-network` for
-real provider calls.
+`max_output_tokens = 12048`, a longer timeout, and a finite benign prompt. It
+is still dry-run by default and must be run with explicit `--allow-network` for
+real provider calls. If a provider rejects the budget as above a model limit,
+record that as a configuration constraint and rerun with a provider-compatible
+bounded value.

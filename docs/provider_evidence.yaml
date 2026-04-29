@@ -2,60 +2,312 @@ sources:
   - source_id: openai_guardrails_streaming_output
     provider_family: OpenAI / OpenAI Guardrails
     api_surface: OpenAI Guardrails Python
-    source_title: TODO(source title)
-    source_url: TODO(source URL)
+    source_title: Streaming vs Blocking - OpenAI Guardrails Python
+    source_url: https://openai.github.io/openai-guardrails-python/streaming_output/
     access_date: "2026-04-29"
     source_last_updated: unknown
     source_type: official_docs
-    evidence_status: TODO(source needed)
-    claims: []
+    evidence_status: partial
+    claims:
+      - claim_id: openai_guardrails_non_streaming_blocks_until_guardrails_complete
+        claim_scope:
+          - response_mode
+          - release_policy
+          - moderation_timing
+          - client_obligations
+        short_excerpt: guardrails complete before showing output
+        paraphrase: Non-streaming is documented as the default safer path because output is shown only after guardrails finish.
+        extracted_semantics:
+          response_mode: non_streaming
+          release_policy: blocking_pre_release_validation
+          moderation_timing: output_guardrails_complete_before_visibility
+          client_obligations: use_for_high_assurance_or_compliance_critical_scenarios
+        confidence: high
+        open_questions: []
+      - claim_id: openai_guardrails_streaming_releases_immediately
+        claim_scope:
+          - response_mode
+          - release_policy
+          - moderation_timing
+          - client_obligations
+          - documented_limit_or_bound
+        short_excerpt: output streams to user immediately
+        paraphrase: Streaming is documented as a faster mode where generated output is released immediately while output guardrails run in parallel.
+        extracted_semantics:
+          response_mode: streaming
+          release_policy: immediate_streaming
+          moderation_timing: output_guardrails_parallel_with_streaming
+          client_obligations: use_for_low_risk_latency_sensitive_applications
+          documented_limit_or_bound: violative_content_may_briefly_appear_before_guardrails_trigger
+        confidence: high
+        open_questions: []
+
   - source_id: azure_openai_content_streaming
     provider_family: Azure OpenAI
     api_surface: Azure OpenAI content streaming
-    source_title: TODO(source title)
-    source_url: TODO(source URL)
+    source_title: Content streaming - Azure OpenAI
+    source_url: https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/content-streaming
     access_date: "2026-04-29"
-    source_last_updated: unknown
+    source_last_updated: 2026-02-27
     source_type: official_docs
-    evidence_status: TODO(source needed)
-    claims: []
+    evidence_status: partial
+    claims:
+      - claim_id: azure_default_streaming_buffers_and_vets_content
+        claim_scope:
+          - response_mode
+          - release_policy
+          - moderation_timing
+          - client_obligations
+        short_excerpt: content buffers before return
+        paraphrase: Default streaming buffers generated content, runs guardrails on the buffer, and returns content only if policy allows it.
+        extracted_semantics:
+          response_mode: streaming_default_filtering
+          release_policy: buffered_streaming
+          moderation_timing: guardrails_run_on_buffered_content_before_return
+          client_obligations: choose_default_streaming_when_immediate_filtering_is_required
+        confidence: high
+        open_questions: []
+      - claim_id: azure_async_filter_returns_token_by_token_with_delayed_signals
+        claim_scope:
+          - response_mode
+          - release_policy
+          - moderation_timing
+          - safety_signal_surface
+          - client_obligations
+          - documented_limit_or_bound
+        short_excerpt: delayed filtering signals
+        paraphrase: Asynchronous Filter returns completion content immediately without buffering while content filters run asynchronously and signals arrive later.
+        extracted_semantics:
+          response_mode: streaming_asynchronous_filter
+          release_policy: immediate_token_by_token_streaming
+          moderation_timing: asynchronous_delayed_filtering
+          safety_signal_surface: annotation_messages_and_content_filter_finish_reason
+          client_obligations: consume_annotations_and_implement_client_side_redaction
+          documented_limit_or_bound: filtering_signal_within_about_1000_characters
+        confidence: high
+        open_questions: []
+      - claim_id: azure_async_filter_offsets_define_validation_watermark
+        claim_scope:
+          - validation_watermark
+          - safety_signal_surface
+        short_excerpt: check_offset never decreases
+        paraphrase: Azure annotation messages include offsets, and check_offset marks how much text has been fully moderated.
+        extracted_semantics:
+          validation_watermark: check_offset_character_position_fully_moderated_never_decreases
+          safety_signal_surface: content_filter_offsets_start_offset_end_offset_check_offset
+        confidence: high
+        open_questions: []
+      - claim_id: azure_async_filter_billing_and_terminal_filter_reason
+        claim_scope:
+          - settlement_semantics
+          - safety_signal_surface
+        short_excerpt: finish_reason content_filter
+        paraphrase: When streaming content filtering triggers, Azure documents a terminal content_filter finish reason and charges for generated completion tokens before filtering.
+        extracted_semantics:
+          settlement_semantics: stream_stops_when_content_filter_signal_is_returned
+          safety_signal_surface: terminal_finish_reason_content_filter
+        confidence: high
+        open_questions: []
+
   - source_id: aws_bedrock_guardrails_streaming
     provider_family: AWS Bedrock Guardrails
     api_surface: Amazon Bedrock Guardrails streaming
-    source_title: TODO(source title)
-    source_url: TODO(source URL)
+    source_title: Configure streaming response behavior to filter content - Amazon Bedrock
+    source_url: https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails-streaming.html
     access_date: "2026-04-29"
     source_last_updated: unknown
     source_type: official_docs
-    evidence_status: TODO(source needed)
-    claims: []
+    evidence_status: partial
+    claims:
+      - claim_id: aws_bedrock_synchronous_streaming_buffers_before_send
+        claim_scope:
+          - response_mode
+          - release_policy
+          - moderation_timing
+          - documented_limit_or_bound
+        short_excerpt: scanned before being sent
+        paraphrase: In synchronous streaming mode, Bedrock Guardrails buffers and scans response chunks before sending them to the user.
+        extracted_semantics:
+          response_mode: streaming_synchronous_guardrails
+          release_policy: buffered_streaming
+          moderation_timing: guardrails_scan_chunks_before_user_release
+          documented_limit_or_bound: introduces_latency_but_scans_every_chunk_before_release
+        confidence: high
+        open_questions: []
+      - claim_id: aws_bedrock_asynchronous_streaming_sends_chunks_immediately
+        claim_scope:
+          - response_mode
+          - release_policy
+          - moderation_timing
+          - client_obligations
+          - documented_limit_or_bound
+        short_excerpt: chunks sent immediately
+        paraphrase: In asynchronous mode, chunks are sent as soon as available while policies are applied in the background.
+        extracted_semantics:
+          response_mode: streaming_asynchronous_guardrails
+          release_policy: immediate_streaming
+          moderation_timing: asynchronous_background_guardrail_scan
+          client_obligations: choose_mode_based_on_latency_and_moderation_accuracy_tradeoff
+          documented_limit_or_bound: inappropriate_content_may_appear_until_scan_completes
+        confidence: high
+        open_questions: []
+      - claim_id: aws_bedrock_async_blocks_subsequent_chunks_after_detection
+        claim_scope:
+          - settlement_semantics
+          - safety_signal_surface
+          - documented_limit_or_bound
+        short_excerpt: subsequent chunks blocked
+        paraphrase: AWS documents that once inappropriate content is identified in asynchronous mode, subsequent chunks are blocked.
+        extracted_semantics:
+          settlement_semantics: subsequent_chunks_blocked_after_inappropriate_content_detected
+          safety_signal_surface: guardrail_blocking_of_subsequent_chunks
+          documented_limit_or_bound: sensitive_information_masking_not_supported_in_asynchronous_mode
+        confidence: high
+        open_questions: []
+
   - source_id: anthropic_streaming_refusals
     provider_family: Anthropic Claude
     api_surface: Claude streaming refusals
-    source_title: TODO(source title)
-    source_url: TODO(source URL)
+    source_title: Streaming refusals - Claude API Docs
+    source_url: https://docs.anthropic.com/en/docs/test-and-evaluate/strengthen-guardrails/handle-streaming-refusals
     access_date: "2026-04-29"
     source_last_updated: unknown
     source_type: official_docs
-    evidence_status: TODO(source needed)
-    claims: []
+    evidence_status: partial
+    claims:
+      - claim_id: anthropic_streaming_classifier_returns_refusal_stop_reason
+        claim_scope:
+          - response_mode
+          - safety_signal_surface
+          - refusal_semantics
+          - moderation_timing
+        short_excerpt: stop_reason refusal
+        paraphrase: Anthropic documents streaming classifier intervention as a refusal stop reason in streaming API responses.
+        extracted_semantics:
+          response_mode: streaming
+          safety_signal_surface: stop_reason_refusal
+          refusal_semantics: streaming_classifier_refusal_control_event
+          moderation_timing: classifier_intervention_during_streaming
+        confidence: high
+        open_questions: []
+      - claim_id: anthropic_refusal_requires_context_reset_and_has_billing
+        claim_scope:
+          - client_obligations
+          - settlement_semantics
+          - documented_limit_or_bound
+        short_excerpt: reset context after refusal
+        paraphrase: After stop_reason refusal, clients must reset or update the refused turn before continuing, and billing can include output tokens generated before refusal.
+        extracted_semantics:
+          client_obligations: reset_or_update_conversation_context_after_refusal
+          settlement_semantics: no_additional_refusal_message_usage_metrics_still_provided
+          documented_limit_or_bound: billed_for_output_tokens_until_refusal
+        confidence: high
+        open_questions: []
+
   - source_id: google_vertex_gemini_safety
     provider_family: Google Gemini / Vertex AI
     api_surface: Vertex AI Gemini safety and inference
-    source_title: TODO(source title)
-    source_url: TODO(source URL)
+    source_title: Vertex AI Gemini inference, FinishReason, and safety filters
+    source_url: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference ; https://docs.cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform_v1.types.Candidate.FinishReason ; https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-filters
     access_date: "2026-04-29"
-    source_last_updated: unknown
+    source_last_updated: inference_2026-04-24 ; finish_reason_2026-04-01 ; safety_filters_2026-04-24
     source_type: official_docs
-    evidence_status: TODO(source needed)
-    claims: []
+    evidence_status: partial
+    claims:
+      - claim_id: google_vertex_inference_supports_streaming_generation
+        claim_scope:
+          - response_mode
+        short_excerpt: generate streaming response
+        paraphrase: Vertex AI documents streaming generation examples for Gemini API usage.
+        extracted_semantics:
+          response_mode: streaming_supported
+        confidence: high
+        open_questions: []
+      - claim_id: google_vertex_finish_reason_safety_surface
+        claim_scope:
+          - safety_signal_surface
+          - settlement_semantics
+          - documented_limit_or_bound
+        short_excerpt: finish reason safety
+        paraphrase: Google documents finish reasons explaining token-generation termination, including safety, blocklist, prohibited content, and SPII reasons.
+        extracted_semantics:
+          safety_signal_surface: finish_reason_safety_blocklist_prohibited_content_spii_and_related_reasons
+          settlement_semantics: finish_reason_explains_why_token_generation_stopped
+          documented_limit_or_bound: candidate_content_empty_if_content_filters_block_output
+        confidence: high
+        open_questions: []
+      - claim_id: google_vertex_python_streaming_blocked_content_empty
+        claim_scope:
+          - safety_signal_surface
+          - documented_limit_or_bound
+        short_excerpt: streaming content is empty
+        paraphrase: The Python client FinishReason reference states that in streaming, content is empty if content filters block output.
+        extracted_semantics:
+          safety_signal_surface: python_candidate_finish_reason_safety
+          documented_limit_or_bound: when_streaming_content_empty_if_filters_block_output
+        confidence: high
+        open_questions: []
+      - claim_id: google_vertex_filters_are_barriers_not_steering
+        claim_scope:
+          - moderation_timing
+          - client_obligations
+        short_excerpt: filters act as barrier
+        paraphrase: Google describes safety and content filters as barriers that block harmful output without directly steering model behavior.
+        extracted_semantics:
+          moderation_timing: safety_and_content_filters_block_potentially_harmful_output
+          client_obligations: configure_blocking_thresholds_for_use_case
+        confidence: high
+        open_questions: []
+
   - source_id: openai_agents_sdk_results
     provider_family: OpenAI Agents SDK
     api_surface: OpenAI Agents Python streaming results
-    source_title: TODO(source title)
-    source_url: TODO(source URL)
+    source_title: Results - OpenAI Agents SDK
+    source_url: https://openai.github.io/openai-agents-python/results/
     access_date: "2026-04-29"
     source_last_updated: unknown
     source_type: official_docs
-    evidence_status: TODO(source needed)
-    claims: []
+    evidence_status: partial
+    claims:
+      - claim_id: openai_agents_streaming_result_surface
+        claim_scope:
+          - response_mode
+          - settlement_semantics
+        short_excerpt: streaming-specific controls
+        paraphrase: RunResultStreaming adds stream_events, current_agent, is_complete, and cancel controls.
+        extracted_semantics:
+          response_mode: framework_streaming_result
+          settlement_semantics: streaming_result_has_is_complete_and_stream_events_controls
+        confidence: high
+        open_questions: []
+      - claim_id: openai_agents_final_output_waits_for_stream_finish
+        claim_scope:
+          - settlement_semantics
+        short_excerpt: final_output stays None
+        paraphrase: In streaming mode, final_output remains unavailable until stream processing has finished.
+        extracted_semantics:
+          settlement_semantics: final_output_none_until_stream_finished_processing
+        confidence: high
+        open_questions: []
+      - claim_id: openai_agents_iterator_defines_stream_completion
+        claim_scope:
+          - settlement_semantics
+          - client_obligations
+          - documented_limit_or_bound
+        short_excerpt: not complete until iterator ends
+        paraphrase: Clients are told to consume stream events until the async iterator finishes, because summary properties and session side effects may settle after the last visible token.
+        extracted_semantics:
+          settlement_semantics: stream_not_complete_until_async_iterator_ends
+          client_obligations: continue_consuming_stream_events_until_iterator_finishes
+          documented_limit_or_bound: summary_properties_and_session_side_effects_may_settle_after_last_visible_token
+        confidence: high
+        open_questions: []
+      - claim_id: openai_agents_cancel_requires_cleanup_consumption
+        claim_scope:
+          - client_obligations
+        short_excerpt: continue consuming after cancel
+        paraphrase: After cancel is called, clients should continue consuming stream events so cancellation and cleanup complete correctly.
+        extracted_semantics:
+          client_obligations: after_cancel_continue_consuming_stream_events_for_cleanup
+        confidence: high
+        open_questions: []

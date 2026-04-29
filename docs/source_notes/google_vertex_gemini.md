@@ -2,36 +2,57 @@
 
 ## Source Title
 
-TODO(source needed)
+Vertex AI Gemini inference, FinishReason, and safety filters
 
-## Source URL
+## Source URLs
 
-TODO(source needed)
+- https://docs.cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference
+- https://docs.cloud.google.com/python/docs/reference/aiplatform/latest/google.cloud.aiplatform_v1.types.Candidate.FinishReason
+- https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/configure-safety-filters
 
 ## Access Date
 
-TODO(source needed)
+2026-04-29
+
+## Source Last Updated
+
+- inference: 2026-04-24 UTC
+- FinishReason: 2026-04-01 UTC
+- safety filters: 2026-04-24 UTC
 
 ## Relevant Quoted or Paraphrased Claim
 
-TODO(source needed)
+Short excerpts:
+
+- "finishReason"
+- "content is empty"
+- "filters act as a barrier"
+
+Paraphrase: Vertex AI documents streaming generation for Gemini. Its response
+schema exposes finish reasons, including safety, blocklist, prohibited content,
+and SPII-related stops. The Python client reference states that in streaming,
+content is empty when content filters block output. The safety filter guide
+describes filters as barriers that block harmful output without directly
+steering model behavior.
 
 ## Semantics Extracted
 
-- release_policy: unknown
-- moderation_timing: unknown
-- safety_signal_surface: unknown
-- validation_watermark: unknown
-- refusal_semantics: unknown
-- settlement_semantics: unknown
-- client_obligations: unknown
+- response_mode: `streaming_supported`
+- release_policy: unknown_from_official_docs
+- moderation_timing: `safety_and_content_filters_block_potentially_harmful_output`
+- safety_signal_surface: `finish_reason_safety_blocklist_prohibited_content_spii_and_related_reasons`; `python_candidate_finish_reason_safety`
+- validation_watermark: unknown_from_official_docs
+- refusal_semantics: unknown_from_official_docs
+- settlement_semantics: `finish_reason_explains_why_token_generation_stopped`
+- client_obligations: `configure_blocking_thresholds_for_use_case`
+- documented_limit_or_bound: `candidate_content_empty_if_content_filters_block_output`; `when_streaming_content_empty_if_filters_block_output`
 
 ## Open Questions
 
-- Which Gemini or Vertex AI API surfaces are in scope?
-- How are safety ratings, blocked content, or terminal safety reasons exposed?
-- What client obligations are documented for streamed output?
+- Does Vertex/Gemini document release-before-validation timing for streaming?
+- Is there a documented validation watermark for streamed safety filtering?
+- Which SDKs preserve blocked-content metadata in identical shapes?
 
 ## Evidence Confidence
 
-unknown
+high

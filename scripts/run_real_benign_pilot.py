@@ -16,6 +16,10 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from lssa.adapters.base import AdapterRequest
+from lssa.adapters.anthropic_messages import (
+    AnthropicMessagesAdapter,
+    AnthropicMessagesClient,
+)
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
 from lssa.schema.events import ResponseMode
 from lssa.tracing.recorder import TraceRecorder
@@ -24,7 +28,11 @@ from lssa.tracing.validator import validate_trace
 PROMPTS_PATH = ROOT / "src" / "lssa" / "prompts" / "benign_prompts.yaml"
 DEFAULT_OUTPUT_DIR = Path("artifacts/real_pilot")
 MAX_CALLS_WITHOUT_FORCE = 2
-SUPPORTED_PROVIDERS = {"openai_responses"}
+SUPPORTED_PROVIDERS = {"anthropic_messages", "openai_responses"}
+DEFAULT_MODELS = {
+    "anthropic_messages": "claude-haiku-4-5-20251001",
+    "openai_responses": "gpt-4.1-mini",
+}
 
 
 @dataclass(frozen=True)
@@ -39,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--provider", choices=sorted(SUPPORTED_PROVIDERS), required=True)
     parser.add_argument("--prompt-id", default="short_text_generation")
     parser.add_argument("--mode", choices=["streaming", "nonstreaming"], default="streaming")
-    parser.add_argument("--model", default="gpt-4.1-mini")
+    parser.add_argument("--model")
     parser.add_argument("--dry-run", action="store_true", default=True)
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--paired", action="store_true")
@@ -71,7 +79,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.allow_network:
         print(
             f"dry-run provider={args.provider} prompt_id={args.prompt_id} "
-            f"modes={','.join(modes)} calls={planned_calls} network=disabled"
+            f"model={_model_for_provider(args)} modes={','.join(modes)} "
+            f"calls={planned_calls} network=disabled"
         )
         return 0
 
@@ -81,6 +90,17 @@ def main(argv: list[str] | None = None) -> int:
             print("OPENAI_API_KEY is required but was not printed", file=sys.stderr)
             return 2
         return _run_openai_network_pilot(args, prompts[args.prompt_id], modes, api_key)
+    if args.provider == "anthropic_messages":
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            print("ANTHROPIC_API_KEY is required but was not printed", file=sys.stderr)
+            return 2
+        return _run_anthropic_network_pilot(
+            args,
+            prompts[args.prompt_id],
+            modes,
+            api_key,
+        )
 
     print(f"unsupported provider: {args.provider}", file=sys.stderr)
     return 2
@@ -106,7 +126,7 @@ def _run_openai_network_pilot(
             prompt_id=prompt.prompt_id,
             prompt=prompt.text,
             response_mode=response_mode,
-            model=args.model,
+            model=_model_for_provider(args),
             provider_family=adapter.provider_family,
             api_surface=adapter.api_surface,
             max_output_tokens=args.max_output_tokens,
@@ -149,6 +169,74 @@ def _run_openai_network_pilot(
             failures += 1
         print(
             f"provider=openai_responses mode={mode_name} status={status} "
+            f"events={len(events)} trace={trace_path} summary={summary_path}"
+        )
+    return 1 if failures else 0
+
+
+def _run_anthropic_network_pilot(
+    args: argparse.Namespace,
+    prompt: BenignPrompt,
+    modes: list[str],
+    api_key: str,
+) -> int:
+    client = AnthropicMessagesClient(
+        api_key=api_key,
+        timeout_seconds=args.timeout_seconds,
+        temperature=args.temperature,
+    )
+    adapter = AnthropicMessagesAdapter(client=client)
+    failures = 0
+    for mode_name in modes:
+        response_mode = _response_mode(mode_name)
+        request = AdapterRequest(
+            trace_id=f"anthropic-messages-{mode_name}-{uuid4().hex}",
+            prompt_id=prompt.prompt_id,
+            prompt=prompt.text,
+            response_mode=response_mode,
+            model=_model_for_provider(args),
+            provider_family=adapter.provider_family,
+            api_surface=adapter.api_surface,
+            max_output_tokens=args.max_output_tokens,
+            metadata={
+                "pilot": "p2_m3_real_benign",
+                "mode": mode_name,
+            },
+        )
+        try:
+            events = list(adapter.run(request))
+        except Exception as exc:  # noqa: BLE001 - CLI must suppress provider tracebacks.
+            print(
+                f"provider=anthropic_messages mode={mode_name} status=error "
+                f"error_type={type(exc).__name__}",
+                file=sys.stderr,
+            )
+            failures += 1
+            continue
+
+        validation = validate_trace(events)
+        recorder = TraceRecorder(
+            trace_id=request.trace_id,
+            provider_family=adapter.provider_family,
+            api_surface=adapter.api_surface,
+            model=request.model,
+            response_mode=response_mode,
+        )
+        recorder.extend(events)
+        run_dir = args.output_dir / "anthropic_messages" / request.prompt_id / mode_name
+        trace_path = recorder.write_jsonl(
+            run_dir / f"{request.trace_id}.jsonl",
+            redact_content=True,
+        )
+        summary_path = recorder.write_summary_json(
+            run_dir / f"{request.trace_id}.summary.json",
+            redact_content=True,
+        )
+        status = "ok" if validation.ok else "invalid"
+        if not validation.ok:
+            failures += 1
+        print(
+            f"provider=anthropic_messages mode={mode_name} status={status} "
             f"events={len(events)} trace={trace_path} summary={summary_path}"
         )
     return 1 if failures else 0
@@ -223,6 +311,12 @@ def _response_mode(mode_name: str) -> ResponseMode:
     if mode_name == "nonstreaming":
         return ResponseMode.NON_STREAMING
     raise ValueError(f"unsupported mode: {mode_name}")
+
+
+def _model_for_provider(args: argparse.Namespace) -> str:
+    if args.model:
+        return args.model
+    return DEFAULT_MODELS[args.provider]
 
 
 def _prompt_from_mapping(data: dict[str, str]) -> BenignPrompt:

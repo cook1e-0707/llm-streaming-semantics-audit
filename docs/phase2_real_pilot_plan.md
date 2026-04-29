@@ -22,11 +22,12 @@ OpenAI Responses API is the first prepared adapter because its streaming API is
 documented as typed semantic events that map naturally into normalized trace
 events. This makes it suitable for harness validation.
 
-## Second Provider Preview
+## Second Provider
 
-Anthropic Messages streaming is a suitable later adapter because it exposes an
-SSE event flow and can stream partial structured deltas. In this milestone it is
-only a skeleton; it must not run network calls.
+Anthropic Messages streaming is the second prepared adapter because it exposes
+an SSE event flow with `message_start`, `content_block_delta`, `message_delta`,
+and `message_stop` events. It must follow the same benign-only, dry-run-by-
+default, `--allow-network` opt-in policy as OpenAI.
 
 ## Non-Claims
 
@@ -40,8 +41,8 @@ All real API calls require explicit `--allow-network`. Scripts default to
 dry-run mode and must refuse unknown prompt IDs, missing environment variables,
 or unsafe output locations.
 
-The OpenAI pilot uses the official Python SDK lazily. Install provider extras
-before a real run:
+The OpenAI and Anthropic pilots use official Python SDKs lazily. Install
+provider extras before a real run:
 
 ```bash
 python -m pip install '.[providers]'
@@ -56,3 +57,10 @@ set +a
 ```
 
 The script does not read or print `.env` by default.
+
+Dry-run examples:
+
+```bash
+python scripts/run_real_benign_pilot.py --provider openai_responses --dry-run
+python scripts/run_real_benign_pilot.py --provider anthropic_messages --dry-run
+```

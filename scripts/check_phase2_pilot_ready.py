@@ -197,7 +197,12 @@ def _real_pilot_runner_guard_check(root: Path) -> GateCheck:
             detail="missing scripts/run_real_benign_pilot.py",
         )
     content = script_path.read_text(encoding="utf-8")
-    required = ["--allow-network", "network=disabled", "OPENAI_API_KEY"]
+    required = [
+        "--allow-network",
+        "network=disabled",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+    ]
     missing = [item for item in required if item not in content]
     return GateCheck(
         name="real_pilot_runner_requires_network_opt_in",

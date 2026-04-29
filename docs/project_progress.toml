@@ -90,7 +90,7 @@ status = "done"
 [[phases.milestones]]
 id = "P2.M3"
 title = "Anthropic benign adapter and pilot"
-status = "next"
+status = "in_progress"
 
 [[phases.milestones]]
 id = "P2.M4"

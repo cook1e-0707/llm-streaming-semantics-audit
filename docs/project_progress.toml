@@ -1,5 +1,5 @@
 current_phase = "P2"
-next_milestone = "P2.M1"
+next_milestone = "P2.M2"
 
 [status_labels]
 done = "done"
@@ -74,18 +74,18 @@ status = "done"
 [[phases]]
 id = "P2"
 title = "Raw API Benign Pilot"
-status = "next"
+status = "in_progress"
 summary = "Validate the harness with benign prompts before introducing safety-sensitive categories."
 
 [[phases.milestones]]
 id = "P2.M1"
 title = "Provider adapter interface"
-status = "next"
+status = "done"
 
 [[phases.milestones]]
 id = "P2.M2"
 title = "Benign streaming trace collection"
-status = "planned"
+status = "next"
 
 [[phases.milestones]]
 id = "P2.M3"

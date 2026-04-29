@@ -37,7 +37,9 @@ templates, and legacy inventory.
 
 Phase 1 is complete: the provider documentation evidence registry, generated
 provider matrix, unknown-field review, and readiness quality gate are in place.
-The next allowed phase is Phase 2, limited to a benign-only raw API pilot.
+Phase 2 has started with a provider-neutral mock trace harness. The next allowed
+step is P2.M2, limited to a small benign-only raw API pilot with explicit
+network opt-in.
 
 ## Project Progress
 
@@ -48,7 +50,7 @@ README by `python scripts/update_readme_status.py`.
 ```text
 Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
 Current phase: P2
-Next milestone: P2.M1
+Next milestone: P2.M2
 
 |-- [done] P0 Research Contract and Measurement Schema
 |   |-- [done] P0.M1 Repository scaffold
@@ -62,9 +64,9 @@ Next milestone: P2.M1
 |   |-- [done] P1.M3 Provider matrix evidence validation
 |   |-- [done] P1.M4 Open questions and unknown-field review
 |   `-- [done] P1.M5 Phase 1 readiness quality gate
-|-- [next] P2 Raw API Benign Pilot
-|   |-- [next] P2.M1 Provider adapter interface
-|   |-- [planned] P2.M2 Benign streaming trace collection
+|-- [in_progress] P2 Raw API Benign Pilot
+|   |-- [done] P2.M1 Provider adapter interface
+|   |-- [next] P2.M2 Benign streaming trace collection
 |   `-- [planned] P2.M3 Trace quality checks
 |-- [deferred] P3 Safety-Signal Pilot
 |   |-- [planned] P3.M1 Redacted prompt policy
@@ -105,6 +107,9 @@ Out of scope for the initial phase:
 - Provider documentation matrix: `docs/provider_matrix.md`
 - Phase 1 unknown-field review: `docs/phase1_unknown_fields_review.md`
 - Phase 1 readiness gate: `docs/phase1_quality_gate.md`
+- Phase 2 plan: `docs/phase2_plan.md`
+- Trace contract: `docs/trace_contract.md`
+- Benign pilot policy: `docs/benign_pilot_policy.md`
 - Experiment scope: `docs/experiment_scope.md`
 - Legacy project notes: `docs/legacy_project_notes.md`
 
@@ -122,38 +127,59 @@ llm-streaming-semantics-audit/
 |   |   |-- openai_agents_sdk.md
 |   |   |-- openai_guardrails.md
 |   |   `-- README.md
+|   |-- benign_pilot_policy.md
 |   |-- experiment_scope.md
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
 |   |-- metrics_registry.yaml
 |   |-- phase1_quality_gate.md
 |   |-- phase1_unknown_fields_review.md
+|   |-- phase2_plan.md
 |   |-- project_progress.toml
 |   |-- provider_evidence.yaml
 |   |-- provider_matrix.md
 |   |-- research_charter.md
-|   `-- semantics_taxonomy.md
+|   |-- semantics_taxonomy.md
+|   `-- trace_contract.md
 |-- scripts/
 |   |-- check_phase1_ready.py
+|   |-- check_phase2_pilot_ready.py
 |   |-- generate_provider_matrix.py
 |   |-- provider_evidence.py
+|   |-- run_mock_pilot.py
 |   |-- update_readme_status.py
 |   `-- validate_provider_matrix.py
 |-- src/
 |   `-- lssa/
+|       |-- adapters/
+|       |   |-- __init__.py
+|       |   |-- base.py
+|       |   `-- mock.py
+|       |-- prompts/
+|       |   `-- benign_prompts.yaml
 |       |-- schema/
 |       |   |-- __init__.py
 |       |   |-- events.py
 |       |   `-- metrics.py
+|       |-- tracing/
+|       |   |-- __init__.py
+|       |   |-- fixtures.py
+|       |   |-- recorder.py
+|       |   `-- validator.py
 |       |-- utils/
 |       |   |-- __init__.py
 |       |   `-- time.py
 |       `-- __init__.py
 |-- tests/
+|   |-- test_adapter_contract.py
 |   |-- test_event_schema.py
+|   |-- test_mock_provider.py
 |   |-- test_phase1_quality_gate.py
+|   |-- test_phase2_pilot_ready.py
 |   |-- test_provider_matrix.py
-|   `-- test_readme_status.py
+|   |-- test_readme_status.py
+|   |-- test_trace_recorder.py
+|   `-- test_trace_validator.py
 |-- .env.example
 |-- .gitignore
 |-- AGENTS.md

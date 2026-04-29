@@ -1,0 +1,16 @@
+prompts:
+  - id: short_text_generation
+    category: short_text_generation
+    text: Write one concise, harmless sentence about careful measurement.
+  - id: long_text_generation
+    category: long_text_generation
+    text: Write a short paragraph about why reproducible logs help software teams debug systems.
+  - id: structured_json_generation
+    category: structured_json_generation
+    text: Return JSON with keys name, purpose, and status for a benign mock audit.
+  - id: numbered_list_generation
+    category: numbered_list_generation
+    text: List three practical steps for keeping a research repository organized.
+  - id: benign_summary
+    category: summarization
+    text: Summarize this benign text in one sentence: A trace recorder stores ordered events so later analysis can compare timing and lifecycle behavior.

@@ -37,9 +37,11 @@ templates, and legacy inventory.
 
 Phase 1 is complete: the provider documentation evidence registry, generated
 provider matrix, unknown-field review, and readiness quality gate are in place.
-Phase 2 has a provider-neutral mock trace harness and a redacted OpenAI
-Responses, Anthropic Messages, and AWS Bedrock Converse benign pilot summaries.
-The next step is P2.M4 benign lifecycle comparison across raw provider traces.
+Phase 2 is complete: the repository has a provider-neutral mock trace harness,
+redacted benign pilot summaries for OpenAI Responses, Anthropic Messages, and
+AWS Bedrock Converse, and a cross-provider benign lifecycle comparison. Phase 3
+has started at the policy layer only; safety-signal timing runs remain blocked
+until prompt governance and retention rules are reviewed.
 
 ## Project Progress
 
@@ -49,8 +51,8 @@ README by `python scripts/update_readme_status.py`.
 <!-- PROJECT_PROGRESS_START -->
 ```text
 Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
-Current phase: P2
-Next milestone: P2.M4
+Current phase: P3
+Next milestone: P3.M2
 
 |-- [done] P0 Research Contract and Measurement Schema
 |   |-- [done] P0.M1 Repository scaffold
@@ -64,14 +66,14 @@ Next milestone: P2.M4
 |   |-- [done] P1.M3 Provider matrix evidence validation
 |   |-- [done] P1.M4 Open questions and unknown-field review
 |   `-- [done] P1.M5 Phase 1 readiness quality gate
-|-- [in_progress] P2 Raw API Benign Pilot
+|-- [done] P2 Raw API Benign Pilot
 |   |-- [done] P2.M1 Provider adapter interface
 |   |-- [done] P2.M2 OpenAI benign pilot and summary
 |   |-- [done] P2.M3 Anthropic and Bedrock benign adapters
-|   `-- [next] P2.M4 Benign lifecycle comparison
-|-- [deferred] P3 Safety-Signal Pilot
-|   |-- [planned] P3.M1 Redacted prompt policy
-|   |-- [planned] P3.M2 Safety signal timing traces
+|   `-- [done] P2.M4 Benign lifecycle comparison
+|-- [in_progress] P3 Safety-Signal Pilot
+|   |-- [done] P3.M1 Redacted prompt policy
+|   |-- [blocked] P3.M2 Safety signal timing traces
 |   `-- [planned] P3.M3 Exposure-window metrics
 `-- [deferred] P4 Agent Framework Propagation
     |-- [planned] P4.M1 Framework instrumentation plan
@@ -114,6 +116,9 @@ Out of scope for the initial phase:
 - OpenAI benign pilot summary: `docs/pilot_runs/openai_responses_benign_pilot.md`
 - Anthropic benign pilot summary: `docs/pilot_runs/anthropic_messages_benign_pilot.md`
 - AWS Bedrock benign pilot summary: `docs/pilot_runs/aws_bedrock_converse_benign_pilot.md`
+- Benign lifecycle comparison: `docs/pilot_runs/benign_lifecycle_comparison.md`
+- Phase 3 plan: `docs/phase3_plan.md`
+- Safety prompt policy: `docs/safety_prompt_policy.md`
 - Trace contract: `docs/trace_contract.md`
 - Benign pilot policy: `docs/benign_pilot_policy.md`
 - Real API data policy: `docs/real_api_data_policy.md`
@@ -129,6 +134,7 @@ llm-streaming-semantics-audit/
 |   |-- pilot_runs/
 |   |   |-- anthropic_messages_benign_pilot.md
 |   |   |-- aws_bedrock_converse_benign_pilot.md
+|   |   |-- benign_lifecycle_comparison.md
 |   |   `-- openai_responses_benign_pilot.md
 |   |-- source_notes/
 |   |   |-- anthropic.md
@@ -148,16 +154,19 @@ llm-streaming-semantics-audit/
 |   |-- phase1_unknown_fields_review.md
 |   |-- phase2_plan.md
 |   |-- phase2_real_pilot_plan.md
+|   |-- phase3_plan.md
 |   |-- project_progress.toml
 |   |-- provider_evidence.yaml
 |   |-- provider_matrix.md
 |   |-- real_api_data_policy.md
 |   |-- research_charter.md
+|   |-- safety_prompt_policy.md
 |   |-- semantics_taxonomy.md
 |   `-- trace_contract.md
 |-- scripts/
 |   |-- check_phase1_ready.py
 |   |-- check_phase2_pilot_ready.py
+|   |-- compare_benign_lifecycle.py
 |   |-- generate_provider_matrix.py
 |   |-- provider_evidence.py
 |   |-- run_mock_pilot.py
@@ -195,6 +204,7 @@ llm-streaming-semantics-audit/
 |   |-- test_anthropic_messages.py
 |   |-- test_aws_bedrock_config.py
 |   |-- test_aws_bedrock_converse.py
+|   |-- test_benign_lifecycle_comparison.py
 |   |-- test_event_schema.py
 |   |-- test_mock_provider.py
 |   |-- test_phase1_quality_gate.py

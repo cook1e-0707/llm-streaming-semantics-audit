@@ -1,5 +1,5 @@
-current_phase = "P2"
-next_milestone = "P2.M4"
+current_phase = "P3"
+next_milestone = "P3.M2"
 
 [status_labels]
 done = "done"
@@ -74,7 +74,7 @@ status = "done"
 [[phases]]
 id = "P2"
 title = "Raw API Benign Pilot"
-status = "in_progress"
+status = "done"
 summary = "Validate the harness with benign prompts before introducing safety-sensitive categories."
 
 [[phases.milestones]]
@@ -95,23 +95,23 @@ status = "done"
 [[phases.milestones]]
 id = "P2.M4"
 title = "Benign lifecycle comparison"
-status = "next"
+status = "done"
 
 [[phases]]
 id = "P3"
 title = "Safety-Signal Pilot"
-status = "deferred"
+status = "in_progress"
 summary = "Measure delayed safety signals only after the benign harness and data policy are stable."
 
 [[phases.milestones]]
 id = "P3.M1"
 title = "Redacted prompt policy"
-status = "planned"
+status = "done"
 
 [[phases.milestones]]
 id = "P3.M2"
 title = "Safety signal timing traces"
-status = "planned"
+status = "blocked"
 
 [[phases.milestones]]
 id = "P3.M3"

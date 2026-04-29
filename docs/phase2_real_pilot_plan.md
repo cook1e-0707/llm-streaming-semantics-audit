@@ -67,7 +67,14 @@ python scripts/run_real_benign_pilot.py --provider anthropic_messages --dry-run
 
 ## Bedrock Configuration Only
 
-`AWS_BEARER_TOKEN_BEDROCK` may be configured locally for future Bedrock Runtime
-work. P2.M3 does not add a Bedrock adapter or run Bedrock calls. The current
-repository support is limited to SDK dependency and redacted configuration
-helpers.
+`AWS_BEARER_TOKEN_BEDROCK` may be configured locally for Bedrock Runtime work.
+The Bedrock Converse adapter is prepared for benign raw-provider traces, but it
+must follow the same dry-run-by-default, `--allow-network` opt-in policy as
+OpenAI and Anthropic. Bedrock guardrail streaming, asynchronous filtering, and
+safety-signal prompts remain out of scope for Phase 2.
+
+Dry-run example:
+
+```bash
+python scripts/run_real_benign_pilot.py --provider aws_bedrock_converse --dry-run
+```

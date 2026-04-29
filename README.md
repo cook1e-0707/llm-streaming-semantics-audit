@@ -38,9 +38,9 @@ templates, and legacy inventory.
 Phase 1 is complete: the provider documentation evidence registry, generated
 provider matrix, unknown-field review, and readiness quality gate are in place.
 Phase 2 has a provider-neutral mock trace harness and a redacted OpenAI
-Responses benign pilot summary. P2.M3 is implementing the Anthropic benign
-adapter and pilot path, still defaulting to dry-run with explicit
-`--allow-network` for real provider calls.
+Responses benign pilot summary. P2.M3 is implementing Anthropic and AWS Bedrock
+benign adapter paths, still defaulting to dry-run with explicit `--allow-network`
+for real provider calls.
 
 ## Project Progress
 
@@ -68,7 +68,7 @@ Next milestone: P2.M3
 |-- [in_progress] P2 Raw API Benign Pilot
 |   |-- [done] P2.M1 Provider adapter interface
 |   |-- [done] P2.M2 OpenAI benign pilot and summary
-|   |-- [in_progress] P2.M3 Anthropic benign adapter and pilot
+|   |-- [in_progress] P2.M3 Anthropic and Bedrock benign adapters
 |   `-- [planned] P2.M4 Benign lifecycle comparison
 |-- [deferred] P3 Safety-Signal Pilot
 |   |-- [planned] P3.M1 Redacted prompt policy
@@ -167,6 +167,7 @@ llm-streaming-semantics-audit/
 |       |-- adapters/
 |       |   |-- __init__.py
 |       |   |-- anthropic_messages.py
+|       |   |-- aws_bedrock_converse.py
 |       |   |-- base.py
 |       |   |-- mock.py
 |       |   `-- openai_responses.py
@@ -190,6 +191,7 @@ llm-streaming-semantics-audit/
 |   |-- test_adapter_contract.py
 |   |-- test_anthropic_messages.py
 |   |-- test_aws_bedrock_config.py
+|   |-- test_aws_bedrock_converse.py
 |   |-- test_event_schema.py
 |   |-- test_mock_provider.py
 |   |-- test_phase1_quality_gate.py

@@ -20,17 +20,30 @@ from lssa.adapters.anthropic_messages import (
     AnthropicMessagesAdapter,
     AnthropicMessagesClient,
 )
+from lssa.adapters.aws_bedrock_converse import (
+    AwsBedrockConverseAdapter,
+    AwsBedrockConverseClient,
+)
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
 from lssa.schema.events import ResponseMode
 from lssa.tracing.recorder import TraceRecorder
+from lssa.utils.aws_bedrock import (
+    AWS_BEARER_TOKEN_BEDROCK_ENV,
+    BedrockRuntimeSdkConfig,
+)
 from lssa.tracing.validator import validate_trace
 
 PROMPTS_PATH = ROOT / "src" / "lssa" / "prompts" / "benign_prompts.yaml"
 DEFAULT_OUTPUT_DIR = Path("artifacts/real_pilot")
 MAX_CALLS_WITHOUT_FORCE = 2
-SUPPORTED_PROVIDERS = {"anthropic_messages", "openai_responses"}
+SUPPORTED_PROVIDERS = {
+    "anthropic_messages",
+    "aws_bedrock_converse",
+    "openai_responses",
+}
 DEFAULT_MODELS = {
     "anthropic_messages": "claude-haiku-4-5-20251001",
+    "aws_bedrock_converse": "us.anthropic.claude-3-5-haiku-20241022-v1:0",
     "openai_responses": "gpt-4.1-mini",
 }
 
@@ -55,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-output-tokens", type=int, default=128)
     parser.add_argument("--timeout-seconds", type=int, default=30)
     parser.add_argument("--temperature", type=float, default=0)
+    parser.add_argument("--aws-region")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     args = parser.parse_args(argv)
@@ -101,6 +115,14 @@ def main(argv: list[str] | None = None) -> int:
             modes,
             api_key,
         )
+    if args.provider == "aws_bedrock_converse":
+        if not os.environ.get(AWS_BEARER_TOKEN_BEDROCK_ENV):
+            print(
+                f"{AWS_BEARER_TOKEN_BEDROCK_ENV} is required but was not printed",
+                file=sys.stderr,
+            )
+            return 2
+        return _run_bedrock_network_pilot(args, prompts[args.prompt_id], modes)
 
     print(f"unsupported provider: {args.provider}", file=sys.stderr)
     return 2
@@ -237,6 +259,75 @@ def _run_anthropic_network_pilot(
             failures += 1
         print(
             f"provider=anthropic_messages mode={mode_name} status={status} "
+            f"events={len(events)} trace={trace_path} summary={summary_path}"
+        )
+    return 1 if failures else 0
+
+
+def _run_bedrock_network_pilot(
+    args: argparse.Namespace,
+    prompt: BenignPrompt,
+    modes: list[str],
+) -> int:
+    sdk_config = BedrockRuntimeSdkConfig.from_env()
+    region_name = args.aws_region or sdk_config.region_name
+    client = AwsBedrockConverseClient(
+        region_name=region_name,
+        temperature=args.temperature,
+    )
+    adapter = AwsBedrockConverseAdapter(client=client)
+    failures = 0
+    for mode_name in modes:
+        response_mode = _response_mode(mode_name)
+        request = AdapterRequest(
+            trace_id=f"aws-bedrock-converse-{mode_name}-{uuid4().hex}",
+            prompt_id=prompt.prompt_id,
+            prompt=prompt.text,
+            response_mode=response_mode,
+            model=_model_for_provider(args),
+            provider_family=adapter.provider_family,
+            api_surface=adapter.api_surface,
+            max_output_tokens=args.max_output_tokens,
+            metadata={
+                "pilot": "p2_bedrock_real_benign",
+                "mode": mode_name,
+                "aws_region": region_name,
+            },
+        )
+        try:
+            events = list(adapter.run(request))
+        except Exception as exc:  # noqa: BLE001 - CLI must suppress provider tracebacks.
+            print(
+                f"provider=aws_bedrock_converse mode={mode_name} status=error "
+                f"error_type={type(exc).__name__}",
+                file=sys.stderr,
+            )
+            failures += 1
+            continue
+
+        validation = validate_trace(events)
+        recorder = TraceRecorder(
+            trace_id=request.trace_id,
+            provider_family=adapter.provider_family,
+            api_surface=adapter.api_surface,
+            model=request.model,
+            response_mode=response_mode,
+        )
+        recorder.extend(events)
+        run_dir = args.output_dir / "aws_bedrock_converse" / request.prompt_id / mode_name
+        trace_path = recorder.write_jsonl(
+            run_dir / f"{request.trace_id}.jsonl",
+            redact_content=True,
+        )
+        summary_path = recorder.write_summary_json(
+            run_dir / f"{request.trace_id}.summary.json",
+            redact_content=True,
+        )
+        status = "ok" if validation.ok else "invalid"
+        if not validation.ok:
+            failures += 1
+        print(
+            f"provider=aws_bedrock_converse mode={mode_name} status={status} "
             f"events={len(events)} trace={trace_path} summary={summary_path}"
         )
     return 1 if failures else 0

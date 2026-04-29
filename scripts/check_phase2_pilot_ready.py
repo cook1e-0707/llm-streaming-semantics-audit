@@ -41,6 +41,7 @@ from lssa.adapters.mock import MockScenario
 ALLOWED_ADAPTER_FILES = {
     "__init__.py",
     "anthropic_messages.py",
+    "aws_bedrock_converse.py",
     "base.py",
     "mock.py",
     "openai_responses.py",
@@ -202,6 +203,7 @@ def _real_pilot_runner_guard_check(root: Path) -> GateCheck:
         "network=disabled",
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
+        "AWS_BEARER_TOKEN_BEDROCK",
     ]
     missing = [item for item in required if item not in content]
     return GateCheck(

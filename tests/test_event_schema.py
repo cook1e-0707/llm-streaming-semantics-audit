@@ -17,10 +17,18 @@ from lssa.schema.events import (
 )
 from lssa.schema.metrics import (
     exposure_window_chars,
+    exposure_window_ms,
+    exposure_window_tokens,
     settlement_lag_ms,
     time_to_first_byte_ms,
     time_to_first_safety_signal_ms,
     time_to_first_token_ms,
+    validation_lag_chars,
+    validation_lag_tokens,
+)
+from lssa.tracing.safety_fixtures import (
+    MockSafetyScenario,
+    safety_trace_for_scenario,
 )
 
 
@@ -133,6 +141,17 @@ def test_basic_metric_computation_on_synthetic_benign_trace() -> None:
     assert time_to_first_safety_signal_ms(events) == 130.0
     assert settlement_lag_ms(events) == 30.0
     assert exposure_window_chars(events) is None
+
+
+def test_safety_range_metrics_on_redacted_mock_trace() -> None:
+    events = safety_trace_for_scenario(MockSafetyScenario.STREAMING_DELAYED_ANNOTATION)
+
+    assert time_to_first_safety_signal_ms(events) == 80
+    assert validation_lag_chars(events) == 10
+    assert validation_lag_tokens(events) == 2
+    assert exposure_window_chars(events) == 10
+    assert exposure_window_tokens(events) == 2
+    assert exposure_window_ms(events) == 30
 
 
 def _event(

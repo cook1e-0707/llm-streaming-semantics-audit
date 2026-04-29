@@ -15,10 +15,12 @@ from lssa.schema.events import (
     Layer,
     ReleasePolicy,
     ResponseMode,
+    SafetySignal,
     StreamEvent,
     TerminalReasonType,
     TraceIdentity,
     TraceSummary,
+    ValidationRange,
 )
 
 
@@ -48,6 +50,8 @@ class TraceRecorder:
         token_count: int | None = None,
         char_count: int | None = None,
         byte_count: int | None = None,
+        safety_signal: SafetySignal | None = None,
+        validation_range: ValidationRange | None = None,
         terminal_reason: TerminalReasonType | None = None,
         raw_event_type: str | None = None,
         payload_summary: str | None = None,
@@ -94,6 +98,8 @@ class TraceRecorder:
             token_count=token_count,
             char_count=char_count,
             byte_count=byte_count,
+            safety_signal=safety_signal,
+            validation_range=validation_range,
             terminal_reason=terminal_reason,
             raw_payload=raw_payload or {},
             metadata=event_metadata,

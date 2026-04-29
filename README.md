@@ -39,9 +39,10 @@ Phase 1 is complete: the provider documentation evidence registry, generated
 provider matrix, unknown-field review, and readiness quality gate are in place.
 Phase 2 is complete: the repository has a provider-neutral mock trace harness,
 redacted benign pilot summaries for OpenAI Responses, Anthropic Messages, and
-AWS Bedrock Converse, and a cross-provider benign lifecycle comparison. Phase 3
-has started at the policy layer only; safety-signal timing runs remain blocked
-until prompt governance and retention rules are reviewed.
+AWS Bedrock Converse, a cross-provider benign lifecycle comparison, and a
+dry-run scaled benign batch runner. Phase 3 has started at the policy and mock
+safety-signal layer only; real safety-signal timing runs remain blocked until
+prompt governance and retention rules are reviewed.
 
 ## Project Progress
 
@@ -70,9 +71,11 @@ Next milestone: P3.M2
 |   |-- [done] P2.M1 Provider adapter interface
 |   |-- [done] P2.M2 OpenAI benign pilot and summary
 |   |-- [done] P2.M3 Anthropic and Bedrock benign adapters
-|   `-- [done] P2.M4 Benign lifecycle comparison
+|   |-- [done] P2.M4 Benign lifecycle comparison
+|   `-- [done] P2.M5 Scaled benign batch runner
 |-- [in_progress] P3 Safety-Signal Pilot
 |   |-- [done] P3.M1 Redacted prompt policy
+|   |-- [done] P3.M2a Mock safety-signal harness
 |   |-- [blocked] P3.M2 Safety signal timing traces
 |   `-- [planned] P3.M3 Exposure-window metrics
 `-- [deferred] P4 Agent Framework Propagation
@@ -112,6 +115,8 @@ Out of scope for the initial phase:
 - Phase 1 readiness gate: `docs/phase1_quality_gate.md`
 - Phase 2 plan: `docs/phase2_plan.md`
 - Phase 2 real pilot plan: `docs/phase2_real_pilot_plan.md`
+- Scaled benign experiment plan: `docs/scaled_benign_experiment_plan.md`
+- Benign batch manifest example: `docs/benign_experiment_manifest.example.toml`
 - AWS Bedrock SDK configuration: `docs/bedrock_sdk_config.md`
 - OpenAI benign pilot summary: `docs/pilot_runs/openai_responses_benign_pilot.md`
 - Anthropic benign pilot summary: `docs/pilot_runs/anthropic_messages_benign_pilot.md`
@@ -119,6 +124,7 @@ Out of scope for the initial phase:
 - Benign lifecycle comparison: `docs/pilot_runs/benign_lifecycle_comparison.md`
 - Phase 3 plan: `docs/phase3_plan.md`
 - Phase 3 quality gate: `docs/phase3_quality_gate.md`
+- Phase 3 mock safety harness: `docs/phase3_mock_safety_harness.md`
 - Safety prompt policy: `docs/safety_prompt_policy.md`
 - Redacted safety prompt registry example: `docs/safety_prompt_registry.example.yaml`
 - Trace contract: `docs/trace_contract.md`
@@ -147,6 +153,7 @@ llm-streaming-semantics-audit/
 |   |   |-- openai_guardrails.md
 |   |   `-- README.md
 |   |-- bedrock_sdk_config.md
+|   |-- benign_experiment_manifest.example.toml
 |   |-- benign_pilot_policy.md
 |   |-- experiment_scope.md
 |   |-- legacy_project_notes.md
@@ -156,6 +163,7 @@ llm-streaming-semantics-audit/
 |   |-- phase1_unknown_fields_review.md
 |   |-- phase2_plan.md
 |   |-- phase2_real_pilot_plan.md
+|   |-- phase3_mock_safety_harness.md
 |   |-- phase3_plan.md
 |   |-- phase3_quality_gate.md
 |   |-- project_progress.toml
@@ -165,16 +173,21 @@ llm-streaming-semantics-audit/
 |   |-- research_charter.md
 |   |-- safety_prompt_policy.md
 |   |-- safety_prompt_registry.example.yaml
+|   |-- scaled_benign_experiment_plan.md
 |   |-- semantics_taxonomy.md
 |   `-- trace_contract.md
 |-- scripts/
+|   |-- check_p3_mock_safety_ready.py
 |   |-- check_phase1_ready.py
 |   |-- check_phase2_pilot_ready.py
 |   |-- check_phase3_ready.py
+|   |-- check_scaled_benign_ready.py
 |   |-- compare_benign_lifecycle.py
 |   |-- generate_provider_matrix.py
 |   |-- provider_evidence.py
+|   |-- run_benign_batch.py
 |   |-- run_mock_pilot.py
+|   |-- run_mock_safety_pilot.py
 |   |-- run_real_benign_pilot.py
 |   |-- summarize_real_pilot.py
 |   |-- update_readme_status.py
@@ -188,6 +201,9 @@ llm-streaming-semantics-audit/
 |       |   |-- base.py
 |       |   |-- mock.py
 |       |   `-- openai_responses.py
+|       |-- experiments/
+|       |   |-- __init__.py
+|       |   `-- manifest.py
 |       |-- prompts/
 |       |   `-- benign_prompts.yaml
 |       |-- schema/
@@ -198,6 +214,7 @@ llm-streaming-semantics-audit/
 |       |   |-- __init__.py
 |       |   |-- fixtures.py
 |       |   |-- recorder.py
+|       |   |-- safety_fixtures.py
 |       |   `-- validator.py
 |       |-- utils/
 |       |   |-- __init__.py
@@ -209,9 +226,11 @@ llm-streaming-semantics-audit/
 |   |-- test_anthropic_messages.py
 |   |-- test_aws_bedrock_config.py
 |   |-- test_aws_bedrock_converse.py
+|   |-- test_benign_batch.py
 |   |-- test_benign_lifecycle_comparison.py
 |   |-- test_event_schema.py
 |   |-- test_mock_provider.py
+|   |-- test_mock_safety_pilot.py
 |   |-- test_phase1_quality_gate.py
 |   |-- test_phase2_pilot_ready.py
 |   |-- test_phase3_quality_gate.py
@@ -238,11 +257,11 @@ llm-streaming-semantics-audit/
 | `TTFB_ms` | implemented | `provider`, `sdk` | elapsed milliseconds from request_start to first_byte |
 | `TTFT_ms` | implemented | `provider`, `sdk`, `framework`, `application`, `user_visible` | elapsed milliseconds from request_start to first_token |
 | `TTFSS_ms` | implemented | `provider`, `sdk`, `framework`, `application` | elapsed milliseconds from request_start to the first safety-relevant signal |
-| `validation_lag_chars` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | emitted characters beyond the latest validation watermark at safety-signal time |
-| `validation_lag_tokens` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | emitted tokens beyond the latest validation watermark at safety-signal time |
-| `exposure_window_chars` | stub | `application`, `user_visible` | characters visible before a later safety signal or invalidation covered them |
-| `exposure_window_tokens` | stub | `application`, `user_visible` | tokens visible before a later safety signal or invalidation covered them |
-| `exposure_window_ms` | stub | `application`, `user_visible` | elapsed milliseconds between first visibility and later safety signal or repair |
+| `validation_lag_chars` | implemented | `provider`, `sdk`, `framework`, `application`, `user_visible` | emitted characters beyond the latest validation watermark at safety-signal time |
+| `validation_lag_tokens` | implemented | `provider`, `sdk`, `framework`, `application`, `user_visible` | emitted tokens beyond the latest validation watermark at safety-signal time |
+| `exposure_window_chars` | implemented | `application`, `user_visible` | characters visible before a later safety signal or invalidation covered them |
+| `exposure_window_tokens` | implemented | `application`, `user_visible` | tokens visible before a later safety signal or invalidation covered them |
+| `exposure_window_ms` | implemented | `application`, `user_visible` | elapsed milliseconds between first visibility and later safety signal or repair |
 | `retroactive_invalidation` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | whether a later event invalidated content already emitted downstream |
 | `terminal_reason_consistency` | stub | `provider`, `sdk`, `framework`, `application`, `user_visible` | whether terminal reasons agree across observable layers for one trace |
 | `settlement_lag_ms` | implemented | `provider`, `sdk`, `framework`, `application` | elapsed milliseconds between the last terminal output event and settled |

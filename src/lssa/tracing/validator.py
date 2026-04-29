@@ -25,6 +25,7 @@ def validate_trace(events: list[StreamEvent]) -> TraceValidationResult:
     errors.extend(_validate_monotonic_timestamps(events))
     errors.extend(_validate_required_order(events))
     errors.extend(_validate_terminal_lifecycle(events))
+    errors.extend(_validate_safety_signal_semantics(events))
 
     return TraceValidationResult(
         ok=not errors,
@@ -122,6 +123,46 @@ def _validate_terminal_lifecycle(events: list[StreamEvent]) -> list[str]:
     return errors
 
 
+def _validate_safety_signal_semantics(events: list[StreamEvent]) -> list[str]:
+    errors: list[str] = []
+    first = _first_indexes(events)
+    request_sent_index = first.get(EventType.REQUEST_SENT)
+
+    for event in events:
+        if not _is_safety_relevant(event):
+            continue
+        if request_sent_index is not None and event.sequence_index < request_sent_index:
+            errors.append("safety signal appears before request_sent")
+        if event.validation_range is not None:
+            errors.extend(_validate_validation_range(event))
+        if event.safety_signal is not None and event.safety_signal.is_terminal:
+            if event.terminal_reason is None and event.event_type not in {
+                EventType.REFUSAL,
+                EventType.CONTENT_FILTER,
+            }:
+                errors.append("terminal safety signal lacks terminal reason")
+    return errors
+
+
+def _validate_validation_range(event: StreamEvent) -> list[str]:
+    errors: list[str] = []
+    validation_range = event.validation_range
+    if validation_range is None:
+        return errors
+    if _range_decreases(validation_range.start_char, validation_range.end_char):
+        errors.append("validation_range char offsets decrease")
+    if _range_decreases(validation_range.start_token, validation_range.end_token):
+        errors.append("validation_range token offsets decrease")
+    if _range_decreases(validation_range.start_byte, validation_range.end_byte):
+        errors.append("validation_range byte offsets decrease")
+    if (
+        validation_range.watermark_event_index is not None
+        and validation_range.watermark_event_index > event.sequence_index
+    ):
+        errors.append("validation watermark points to a future event")
+    return errors
+
+
 def _first_indexes(events: list[StreamEvent]) -> dict[EventType, int]:
     first: dict[EventType, int] = {}
     for index, event in enumerate(events):
@@ -148,3 +189,15 @@ def _monotonic_ns(event: StreamEvent) -> int | None:
     if value is None:
         return None
     return int(value)
+
+
+def _is_safety_relevant(event: StreamEvent) -> bool:
+    return (
+        event.event_type
+        in {EventType.SAFETY_ANNOTATION, EventType.REFUSAL, EventType.CONTENT_FILTER}
+        or event.safety_signal is not None
+    )
+
+
+def _range_decreases(start: int | None, end: int | None) -> bool:
+    return start is not None and end is not None and start > end

@@ -31,6 +31,12 @@ Run small, reviewed, provider-level safety-signal pilots only after P3.M1
 criteria are satisfied. This milestone remains blocked until prompt sourcing,
 review, redaction, output retention, and stop conditions are documented.
 
+### P3.M2a Mock Safety-Signal Harness
+
+Validate safety-signal event ordering, redacted trace persistence, TTFSS, and
+range-label metrics using synthetic mock traces only. This does not authorize
+real safety-signal provider calls.
+
 ### P3.M3 Exposure-Window Metrics
 
 Compute exposure-window and validation-lag metrics only after traces include
@@ -68,4 +74,5 @@ Before running real safety-signal pilots, the repository must have:
 
 ```bash
 python scripts/check_phase3_ready.py
+python scripts/check_p3_mock_safety_ready.py
 ```

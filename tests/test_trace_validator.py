@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from lssa.schema.events import EventType
+from lssa.schema.events import EventType, ValidationRange
 from lssa.tracing.fixtures import benign_streaming_trace, make_event, reindex_events
 from lssa.tracing.validator import validate_trace
 
@@ -82,3 +82,39 @@ def test_trace_validator_rejects_cancel_without_cleanup() -> None:
 
     assert not result.ok
     assert any("cancel is not followed by iterator_end" in error for error in result.errors)
+
+
+def test_trace_validator_rejects_decreasing_validation_range() -> None:
+    events = benign_streaming_trace()
+    events.insert(
+        6,
+        make_event(EventType.SAFETY_ANNOTATION, 6, timestamp_ms=55),
+    )
+    events = reindex_events(events)
+    events[6] = replace(
+        events[6],
+        validation_range=ValidationRange(start_char=10, end_char=5),
+    )
+
+    result = validate_trace(events)
+
+    assert not result.ok
+    assert any("validation_range char offsets decrease" in error for error in result.errors)
+
+
+def test_trace_validator_rejects_future_validation_watermark() -> None:
+    events = benign_streaming_trace()
+    events.insert(
+        6,
+        make_event(EventType.SAFETY_ANNOTATION, 6, timestamp_ms=55),
+    )
+    events = reindex_events(events)
+    events[6] = replace(
+        events[6],
+        validation_range=ValidationRange(start_char=0, end_char=5, watermark_event_index=99),
+    )
+
+    result = validate_trace(events)
+
+    assert not result.ok
+    assert any("validation watermark points to a future event" in error for error in result.errors)

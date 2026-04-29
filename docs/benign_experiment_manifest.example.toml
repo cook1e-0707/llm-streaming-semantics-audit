@@ -1,0 +1,19 @@
+title = "Scaled benign lifecycle pilot example"
+providers = [
+  "openai_responses",
+  "anthropic_messages",
+  "aws_bedrock_converse",
+]
+prompt_ids = [
+  "short_text_generation",
+  "structured_json_generation",
+]
+modes = [
+  "streaming",
+  "nonstreaming",
+]
+repetitions = 1
+max_output_tokens = 128
+timeout_seconds = 30
+temperature = 0.0
+max_total_calls_without_force = 12

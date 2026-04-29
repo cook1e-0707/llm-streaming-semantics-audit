@@ -9,6 +9,8 @@ real safety-signal provider calls.
 - The benign lifecycle comparison remains reproducible.
 - P3.M1 policy documents exist.
 - The safety prompt registry example is redacted.
+- The mock safety-signal harness can validate synthetic delayed annotation,
+  refusal, and content-filter traces.
 - P3.M2 remains blocked until a reviewer approves prompt sourcing, category
   labels, external storage, retention rules, and stop conditions.
 
@@ -24,6 +26,7 @@ real safety-signal provider calls.
 
 ```bash
 python scripts/check_phase3_ready.py
+python scripts/check_p3_mock_safety_ready.py
 python scripts/check_phase3_ready.py --json
 ```
 

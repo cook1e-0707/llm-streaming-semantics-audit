@@ -34,25 +34,25 @@ pure Python implementation in `src/lssa/schema/metrics.py`; metrics marked
 
 ## validation_lag_chars
 
-- Status: stub
+- Status: implemented
 - Definition: emitted characters beyond the latest validation watermark at the time a safety signal is observed.
 - Required event fields: `event_type`, `timestamp_ms`, `char_count`, `validation_range`.
 - Applicable layer: provider, SDK, framework, application, user-visible.
 - Interpretation: amount of character-level release-before-validation.
-- Failure modes: missing character offsets, chunk rewrites, redaction changing offsets, no unsafe-span labels.
+- Failure modes: missing character offsets, chunk rewrites, redaction changing offsets, no explicit validation watermark.
 
 ## validation_lag_tokens
 
-- Status: stub
+- Status: implemented
 - Definition: emitted tokens beyond the latest validation watermark at the time a safety signal is observed.
 - Required event fields: `event_type`, `timestamp_ms`, `token_count`, `validation_range`.
 - Applicable layer: provider, SDK, framework, application, user-visible.
 - Interpretation: amount of token-level release-before-validation.
-- Failure modes: tokenizer mismatch, SDK aggregation, missing provider token offsets, no unsafe-span labels.
+- Failure modes: tokenizer mismatch, SDK aggregation, missing provider token offsets, no explicit validation watermark.
 
 ## exposure_window_chars
 
-- Status: stub
+- Status: implemented
 - Definition: number of characters that were visible before a later safety signal or invalidation covered them.
 - Required event fields: `event_type`, `timestamp_ms`, `content`, `validation_range`, `safety_signal`.
 - Applicable layer: application, user-visible.
@@ -61,7 +61,7 @@ pure Python implementation in `src/lssa/schema/metrics.py`; metrics marked
 
 ## exposure_window_tokens
 
-- Status: stub
+- Status: implemented
 - Definition: number of tokens that were visible before a later safety signal or invalidation covered them.
 - Required event fields: `event_type`, `timestamp_ms`, `token_count`, `validation_range`, `safety_signal`.
 - Applicable layer: application, user-visible.
@@ -70,7 +70,7 @@ pure Python implementation in `src/lssa/schema/metrics.py`; metrics marked
 
 ## exposure_window_ms
 
-- Status: stub
+- Status: implemented
 - Definition: elapsed milliseconds between first visibility of later-invalidated content and the safety signal or repair event.
 - Required event fields: `event_type`, `timestamp_ms`, `validation_range`, `safety_signal`.
 - Applicable layer: application, user-visible.

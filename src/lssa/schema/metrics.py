@@ -59,38 +59,96 @@ def settlement_lag_ms(events: Iterable[StreamEvent]) -> float | None:
 
 
 def validation_lag_chars(events: Iterable[StreamEvent]) -> int | None:
-    """TODO: compute only after traces include validated character watermarks."""
+    """Return emitted characters beyond the safety event's validation watermark.
 
-    _consume(events)
-    return None
+    The metric is defined only for traces that carry an explicit
+    ``validation_range.end_char`` on a safety event. It does not infer unsafe
+    spans from content text.
+    """
+
+    sorted_events = _sorted_events(events)
+    safety_event = _first_safety_event_with_range(sorted_events)
+    if safety_event is None or safety_event.validation_range is None:
+        return None
+    end_char = safety_event.metadata.get(
+        "validation_watermark_char",
+        safety_event.validation_range.end_char,
+    )
+    if end_char is None:
+        return None
+    end_char = int(end_char)
+    emitted = _emitted_chars_before_or_at(sorted_events, safety_event)
+    if emitted is None:
+        return None
+    return max(0, emitted - end_char)
 
 
 def validation_lag_tokens(events: Iterable[StreamEvent]) -> int | None:
-    """TODO: compute only after traces include validated token watermarks."""
+    """Return emitted tokens beyond the safety event's validation watermark."""
 
-    _consume(events)
-    return None
+    sorted_events = _sorted_events(events)
+    safety_event = _first_safety_event_with_range(sorted_events)
+    if safety_event is None or safety_event.validation_range is None:
+        return None
+    end_token = safety_event.metadata.get(
+        "validation_watermark_token",
+        safety_event.validation_range.end_token,
+    )
+    if end_token is None:
+        return None
+    end_token = int(end_token)
+    emitted = _emitted_tokens_before_or_at(sorted_events, safety_event)
+    if emitted is None:
+        return None
+    return max(0, emitted - end_token)
 
 
 def exposure_window_chars(events: Iterable[StreamEvent]) -> int | None:
-    """TODO: requires unsafe-span labels and user-visible invalidation ranges."""
+    """Return explicitly invalidated visible characters, when range labels exist.
 
-    _consume(events)
-    return None
+    This function intentionally requires trace labels. It returns ``None`` when
+    the safety event does not carry a validation range with character offsets.
+    """
+
+    safety_event = _first_safety_event_with_range(_sorted_events(events))
+    if safety_event is None or safety_event.validation_range is None:
+        return None
+    start_char = safety_event.validation_range.start_char
+    end_char = safety_event.validation_range.end_char
+    if start_char is None or end_char is None:
+        return None
+    return max(0, end_char - start_char)
 
 
 def exposure_window_tokens(events: Iterable[StreamEvent]) -> int | None:
-    """TODO: requires unsafe-span labels and token-level invalidation ranges."""
+    """Return explicitly invalidated visible tokens, when range labels exist."""
 
-    _consume(events)
-    return None
+    safety_event = _first_safety_event_with_range(_sorted_events(events))
+    if safety_event is None or safety_event.validation_range is None:
+        return None
+    start_token = safety_event.validation_range.start_token
+    end_token = safety_event.validation_range.end_token
+    if start_token is None or end_token is None:
+        return None
+    return max(0, end_token - start_token)
 
 
 def exposure_window_ms(events: Iterable[StreamEvent]) -> float | None:
-    """TODO: requires first visibility and later invalidation timestamps."""
+    """Return elapsed time from first covered visible chunk to safety signal.
 
-    _consume(events)
-    return None
+    The metric is computed only when a safety event carries an explicit
+    validation range. It does not inspect raw prompt or output text.
+    """
+
+    sorted_events = _sorted_events(events)
+    safety_event = _first_safety_event_with_range(sorted_events)
+    if safety_event is None or safety_event.validation_range is None:
+        return None
+    start_char = safety_event.validation_range.start_char
+    first_visible = _first_chunk_covering_char(sorted_events, start_char)
+    if first_visible is None:
+        return None
+    return safety_event.timestamp_ms - first_visible.timestamp_ms
 
 
 def _elapsed_from_start(
@@ -122,5 +180,71 @@ def _sorted_events(events: Iterable[StreamEvent]) -> list[StreamEvent]:
     return sorted(events, key=lambda event: (event.timestamp_ms, event.sequence_index))
 
 
-def _consume(events: Iterable[StreamEvent]) -> None:
-    list(events)
+def _first_safety_event_with_range(events: Iterable[StreamEvent]) -> StreamEvent | None:
+    return next(
+        (
+            event
+            for event in events
+            if _is_safety_event(event) and event.validation_range is not None
+        ),
+        None,
+    )
+
+
+def _emitted_chars_before_or_at(
+    events: Iterable[StreamEvent],
+    boundary: StreamEvent,
+) -> int | None:
+    total = 0
+    observed = False
+    for event in events:
+        if event.sequence_index > boundary.sequence_index:
+            break
+        if event.event_type != EventType.CHUNK:
+            continue
+        if event.char_count is None:
+            if event.content is None:
+                continue
+            total += len(event.content)
+        else:
+            total += event.char_count
+        observed = True
+    return total if observed else None
+
+
+def _emitted_tokens_before_or_at(
+    events: Iterable[StreamEvent],
+    boundary: StreamEvent,
+) -> int | None:
+    total = 0
+    observed = False
+    for event in events:
+        if event.sequence_index > boundary.sequence_index:
+            break
+        if event.event_type != EventType.CHUNK:
+            continue
+        if event.token_count is None:
+            continue
+        total += event.token_count
+        observed = True
+    return total if observed else None
+
+
+def _first_chunk_covering_char(
+    events: Iterable[StreamEvent],
+    start_char: int | None,
+) -> StreamEvent | None:
+    if start_char is None:
+        return _first_event(events, EventType.CHUNK)
+    total = 0
+    for event in events:
+        if event.event_type != EventType.CHUNK:
+            continue
+        chunk_chars = event.char_count
+        if chunk_chars is None:
+            chunk_chars = len(event.content or "")
+        chunk_start = total
+        total += chunk_chars
+        if chunk_start <= start_char < total:
+            return event
+    return None

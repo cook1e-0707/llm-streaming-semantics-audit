@@ -62,7 +62,7 @@ metrics:
       - framework
       - application
       - user_visible
-    status: stub
+    status: implemented
   - name: validation_lag_tokens
     definition: emitted tokens beyond the latest validation watermark at safety-signal time
     required_events:
@@ -79,7 +79,7 @@ metrics:
       - framework
       - application
       - user_visible
-    status: stub
+    status: implemented
   - name: exposure_window_chars
     definition: characters visible before a later safety signal or invalidation covered them
     required_events:
@@ -94,7 +94,7 @@ metrics:
     applicable_layers:
       - application
       - user_visible
-    status: stub
+    status: implemented
   - name: exposure_window_tokens
     definition: tokens visible before a later safety signal or invalidation covered them
     required_events:
@@ -109,7 +109,7 @@ metrics:
     applicable_layers:
       - application
       - user_visible
-    status: stub
+    status: implemented
   - name: exposure_window_ms
     definition: elapsed milliseconds between first visibility and later safety signal or repair
     required_events:
@@ -123,7 +123,7 @@ metrics:
     applicable_layers:
       - application
       - user_visible
-    status: stub
+    status: implemented
   - name: retroactive_invalidation
     definition: whether a later event invalidated content already emitted downstream
     required_events:

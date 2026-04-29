@@ -12,6 +12,10 @@ Real pilot scripts expect required keys to already be present in the process
 environment. Load `.env` in the shell before running, and do not pass secrets as
 command-line arguments.
 
+Bedrock API key authentication uses `AWS_BEARER_TOKEN_BEDROCK`. The repository
+may check whether this variable is configured, but must not print or persist the
+token value.
+
 ## Prompt Scope
 
 Only prompt IDs from `src/lssa/prompts/benign_prompts.yaml` are allowed. Unsafe,

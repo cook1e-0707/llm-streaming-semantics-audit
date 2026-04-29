@@ -64,3 +64,10 @@ Dry-run examples:
 python scripts/run_real_benign_pilot.py --provider openai_responses --dry-run
 python scripts/run_real_benign_pilot.py --provider anthropic_messages --dry-run
 ```
+
+## Bedrock Configuration Only
+
+`AWS_BEARER_TOKEN_BEDROCK` may be configured locally for future Bedrock Runtime
+work. P2.M3 does not add a Bedrock adapter or run Bedrock calls. The current
+repository support is limited to SDK dependency and redacted configuration
+helpers.

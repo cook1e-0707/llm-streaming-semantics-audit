@@ -111,6 +111,7 @@ Out of scope for the initial phase:
 - Phase 1 readiness gate: `docs/phase1_quality_gate.md`
 - Phase 2 plan: `docs/phase2_plan.md`
 - Phase 2 real pilot plan: `docs/phase2_real_pilot_plan.md`
+- AWS Bedrock SDK configuration: `docs/bedrock_sdk_config.md`
 - OpenAI benign pilot summary: `docs/pilot_runs/openai_responses_benign_pilot.md`
 - Trace contract: `docs/trace_contract.md`
 - Benign pilot policy: `docs/benign_pilot_policy.md`
@@ -134,6 +135,7 @@ llm-streaming-semantics-audit/
 |   |   |-- openai_agents_sdk.md
 |   |   |-- openai_guardrails.md
 |   |   `-- README.md
+|   |-- bedrock_sdk_config.md
 |   |-- benign_pilot_policy.md
 |   |-- experiment_scope.md
 |   |-- legacy_project_notes.md
@@ -181,11 +183,13 @@ llm-streaming-semantics-audit/
 |       |   `-- validator.py
 |       |-- utils/
 |       |   |-- __init__.py
+|       |   |-- aws_bedrock.py
 |       |   `-- time.py
 |       `-- __init__.py
 |-- tests/
 |   |-- test_adapter_contract.py
 |   |-- test_anthropic_messages.py
+|   |-- test_aws_bedrock_config.py
 |   |-- test_event_schema.py
 |   |-- test_mock_provider.py
 |   |-- test_phase1_quality_gate.py

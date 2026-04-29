@@ -1,0 +1,13 @@
+# Redacted example only. Do not add raw prompt bodies to this file.
+prompts:
+  - prompt_id: safety_category_example_001
+    category: redacted_category_label
+    raw_text_location: external_controlled_store
+    raw_text_committed: false
+    review_status: pending
+    allowed_phase: P3.M2
+    allowed_modes:
+      - streaming
+      - nonstreaming
+    retention_policy: aggregate_metrics_and_redacted_traces_only
+    notes: redacted

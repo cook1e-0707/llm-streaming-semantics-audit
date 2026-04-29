@@ -118,7 +118,9 @@ Out of scope for the initial phase:
 - AWS Bedrock benign pilot summary: `docs/pilot_runs/aws_bedrock_converse_benign_pilot.md`
 - Benign lifecycle comparison: `docs/pilot_runs/benign_lifecycle_comparison.md`
 - Phase 3 plan: `docs/phase3_plan.md`
+- Phase 3 quality gate: `docs/phase3_quality_gate.md`
 - Safety prompt policy: `docs/safety_prompt_policy.md`
+- Redacted safety prompt registry example: `docs/safety_prompt_registry.example.yaml`
 - Trace contract: `docs/trace_contract.md`
 - Benign pilot policy: `docs/benign_pilot_policy.md`
 - Real API data policy: `docs/real_api_data_policy.md`
@@ -155,17 +157,20 @@ llm-streaming-semantics-audit/
 |   |-- phase2_plan.md
 |   |-- phase2_real_pilot_plan.md
 |   |-- phase3_plan.md
+|   |-- phase3_quality_gate.md
 |   |-- project_progress.toml
 |   |-- provider_evidence.yaml
 |   |-- provider_matrix.md
 |   |-- real_api_data_policy.md
 |   |-- research_charter.md
 |   |-- safety_prompt_policy.md
+|   |-- safety_prompt_registry.example.yaml
 |   |-- semantics_taxonomy.md
 |   `-- trace_contract.md
 |-- scripts/
 |   |-- check_phase1_ready.py
 |   |-- check_phase2_pilot_ready.py
+|   |-- check_phase3_ready.py
 |   |-- compare_benign_lifecycle.py
 |   |-- generate_provider_matrix.py
 |   |-- provider_evidence.py
@@ -209,6 +214,7 @@ llm-streaming-semantics-audit/
 |   |-- test_mock_provider.py
 |   |-- test_phase1_quality_gate.py
 |   |-- test_phase2_pilot_ready.py
+|   |-- test_phase3_quality_gate.py
 |   |-- test_provider_matrix.py
 |   |-- test_readme_status.py
 |   |-- test_real_benign_pilot.py

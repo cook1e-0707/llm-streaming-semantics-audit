@@ -64,3 +64,8 @@ Before running real safety-signal pilots, the repository must have:
 - provider-specific stop conditions
 - explicit command-line network opt-in
 - tests proving unsafe prompt text is not committed
+- a passing Phase 3 quality gate:
+
+```bash
+python scripts/check_phase3_ready.py
+```

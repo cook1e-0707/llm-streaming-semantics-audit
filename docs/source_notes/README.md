@@ -62,6 +62,7 @@ Allowed `evidence_status` values:
 - `partial`
 - `TODO(source needed)`
 - `unknown`
+- `deferred`
 
 Allowed `confidence` values:
 

@@ -1,5 +1,5 @@
-current_phase = "P1"
-next_milestone = "P1.M4"
+current_phase = "P2"
+next_milestone = "P2.M1"
 
 [status_labels]
 done = "done"
@@ -43,7 +43,7 @@ status = "done"
 [[phases]]
 id = "P1"
 title = "Provider Documentation Audit"
-status = "in_progress"
+status = "done"
 summary = "Record official documentation evidence and map provider claims onto the shared semantics taxonomy."
 
 [[phases.milestones]]
@@ -64,23 +64,23 @@ status = "done"
 [[phases.milestones]]
 id = "P1.M4"
 title = "Open questions and unknown-field review"
-status = "next"
+status = "done"
 
 [[phases.milestones]]
 id = "P1.M5"
 title = "Phase 1 readiness quality gate"
-status = "planned"
+status = "done"
 
 [[phases]]
 id = "P2"
 title = "Raw API Benign Pilot"
-status = "planned"
+status = "next"
 summary = "Validate the harness with benign prompts before introducing safety-sensitive categories."
 
 [[phases.milestones]]
 id = "P2.M1"
 title = "Provider adapter interface"
-status = "planned"
+status = "next"
 
 [[phases.milestones]]
 id = "P2.M2"

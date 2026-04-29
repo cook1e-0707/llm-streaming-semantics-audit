@@ -7,7 +7,13 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_CONFIDENCE = {"high", "medium", "low", "unknown"}
-ALLOWED_EVIDENCE_STATUS = {"complete", "partial", "TODO(source needed)", "unknown"}
+ALLOWED_EVIDENCE_STATUS = {
+    "complete",
+    "partial",
+    "TODO(source needed)",
+    "unknown",
+    "deferred",
+}
 ALLOWED_SOURCE_TYPES = {"official_docs"}
 UNKNOWN_FIELD_VALUES = {"unknown_from_official_docs", "not_documented_in_source"}
 MATRIX_SEMANTIC_COLUMNS = [

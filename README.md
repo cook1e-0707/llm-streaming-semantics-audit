@@ -31,13 +31,13 @@ downstream actions?
 
 ## Current Phase
 
-Phase 0 is complete: the repository now has the research contract, shared
+Phase 0 is complete: the repository has the research contract, shared
 terminology, trace schema, initial metrics, README generation, provider audit
 templates, and legacy inventory.
 
-The current active phase is Phase 1: provider documentation audit. Official
-source notes will be mapped to the taxonomy before any provider API measurement
-is added.
+Phase 1 is complete: the provider documentation evidence registry, generated
+provider matrix, unknown-field review, and readiness quality gate are in place.
+The next allowed phase is Phase 2, limited to a benign-only raw API pilot.
 
 ## Project Progress
 
@@ -47,8 +47,8 @@ README by `python scripts/update_readme_status.py`.
 <!-- PROJECT_PROGRESS_START -->
 ```text
 Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
-Current phase: P1
-Next milestone: P1.M4
+Current phase: P2
+Next milestone: P2.M1
 
 |-- [done] P0 Research Contract and Measurement Schema
 |   |-- [done] P0.M1 Repository scaffold
@@ -56,14 +56,14 @@ Next milestone: P1.M4
 |   |-- [done] P0.M3 Trace event and metric schema
 |   |-- [done] P0.M4 README status generation
 |   `-- [done] P0.M5 Legacy project inventory
-|-- [in_progress] P1 Provider Documentation Audit
+|-- [done] P1 Provider Documentation Audit
 |   |-- [done] P1.M1 Source note templates
 |   |-- [done] P1.M2 Official source evidence collection
 |   |-- [done] P1.M3 Provider matrix evidence validation
-|   |-- [next] P1.M4 Open questions and unknown-field review
-|   `-- [planned] P1.M5 Phase 1 readiness quality gate
-|-- [planned] P2 Raw API Benign Pilot
-|   |-- [planned] P2.M1 Provider adapter interface
+|   |-- [done] P1.M4 Open questions and unknown-field review
+|   `-- [done] P1.M5 Phase 1 readiness quality gate
+|-- [next] P2 Raw API Benign Pilot
+|   |-- [next] P2.M1 Provider adapter interface
 |   |-- [planned] P2.M2 Benign streaming trace collection
 |   `-- [planned] P2.M3 Trace quality checks
 |-- [deferred] P3 Safety-Signal Pilot
@@ -103,6 +103,8 @@ Out of scope for the initial phase:
 - Machine-readable project progress: `docs/project_progress.toml`
 - Machine-readable provider evidence: `docs/provider_evidence.yaml`
 - Provider documentation matrix: `docs/provider_matrix.md`
+- Phase 1 unknown-field review: `docs/phase1_unknown_fields_review.md`
+- Phase 1 readiness gate: `docs/phase1_quality_gate.md`
 - Experiment scope: `docs/experiment_scope.md`
 - Legacy project notes: `docs/legacy_project_notes.md`
 
@@ -124,12 +126,15 @@ llm-streaming-semantics-audit/
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
 |   |-- metrics_registry.yaml
+|   |-- phase1_quality_gate.md
+|   |-- phase1_unknown_fields_review.md
 |   |-- project_progress.toml
 |   |-- provider_evidence.yaml
 |   |-- provider_matrix.md
 |   |-- research_charter.md
 |   `-- semantics_taxonomy.md
 |-- scripts/
+|   |-- check_phase1_ready.py
 |   |-- generate_provider_matrix.py
 |   |-- provider_evidence.py
 |   |-- update_readme_status.py
@@ -146,6 +151,7 @@ llm-streaming-semantics-audit/
 |       `-- __init__.py
 |-- tests/
 |   |-- test_event_schema.py
+|   |-- test_phase1_quality_gate.py
 |   |-- test_provider_matrix.py
 |   `-- test_readme_status.py
 |-- .env.example

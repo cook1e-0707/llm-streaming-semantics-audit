@@ -22,6 +22,19 @@ def test_example_benign_batch_manifest_builds_expected_plan() -> None:
     assert {run.mode for run in runs} == {"streaming", "nonstreaming"}
 
 
+def test_stop_reason_probe_manifest_uses_larger_bounded_output_budget() -> None:
+    root = Path(__file__).resolve().parents[1]
+    manifest = load_benign_batch_manifest(
+        root / "docs" / "stop_reason_probe_manifest.example.toml"
+    )
+    runs = build_planned_runs(manifest)
+
+    assert len(runs) == 6
+    assert manifest.max_output_tokens == 2048
+    assert manifest.timeout_seconds == 120
+    assert {run.prompt_id for run in runs} == {"stop_reason_probe_long_generation"}
+
+
 def test_benign_batch_dry_run_writes_redacted_plan(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[1]
     manifest_path = root / "docs" / "benign_experiment_manifest.example.toml"

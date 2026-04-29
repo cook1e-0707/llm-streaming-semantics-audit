@@ -54,6 +54,7 @@ def test_render_markdown_excludes_model_content(tmp_path: Path) -> None:
 
     assert "model output text" not in markdown
     assert "Content fields redacted: `yes`" in markdown
+    assert "Provider stop reason" in markdown
     assert "`short_text_generation`" in markdown
 
 
@@ -193,6 +194,7 @@ def _write_trace(
         wall_time_iso=started_at,
         content="model output text",
         char_count=17,
+        metadata={"provider_stop_reason": "completed"},
     )
     recorder.append(
         EventType.ITERATOR_END,

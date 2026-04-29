@@ -50,6 +50,7 @@ class PilotTraceRow:
     ttft_ms: float | None
     settlement_lag_ms: float | None
     terminal_reason: str
+    provider_stop_reason: str
     unredacted_content_events: int
     trace_path: Path
 
@@ -155,8 +156,8 @@ def render_markdown(
         "",
         "## Latest Trace Summary",
         "",
-        "| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason |",
-        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason | Provider stop reason |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
     ]
     for row in rows:
         lines.append(
@@ -174,6 +175,7 @@ def render_markdown(
                     _format_optional_float(row.ttft_ms),
                     _format_optional_float(row.settlement_lag_ms),
                     f"`{row.terminal_reason}`",
+                    f"`{row.provider_stop_reason}`",
                 ]
             )
             + " |"
@@ -188,6 +190,8 @@ def render_markdown(
             "- `TTFT_ms` is only defined for streaming traces that emit `first_token`.",
             "- `Final chars` uses normalized character counts and does not require",
             "  retaining model text.",
+            "- `Provider stop reason` is copied from provider metadata when exposed by",
+            "  the adapter; otherwise it is reported as `unknown`.",
             "- Artifacts remain under ignored local directories and are not committed.",
             "",
         ]
@@ -223,6 +227,7 @@ def _row_from_events(
         ttft_ms=time_to_first_token_ms(events),
         settlement_lag_ms=settlement_lag_ms(events),
         terminal_reason=terminal_reason,
+        provider_stop_reason=_provider_stop_reason(events),
         unredacted_content_events=sum(event.content is not None for event in events),
         trace_path=trace_path,
     )
@@ -280,6 +285,15 @@ def _terminal_reason(events: list[StreamEvent]) -> str:
     for event in reversed(events):
         if event.terminal_reason is not None:
             return event.terminal_reason.value
+    return "unknown"
+
+
+def _provider_stop_reason(events: list[StreamEvent]) -> str:
+    for event in reversed(events):
+        if event.event_type == EventType.FINAL_RESPONSE:
+            value = event.metadata.get("provider_stop_reason")
+            if isinstance(value, str) and value:
+                return value
     return "unknown"
 
 

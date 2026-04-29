@@ -102,6 +102,11 @@ id = "P2.M5"
 title = "Scaled benign batch runner"
 status = "done"
 
+[[phases.milestones]]
+id = "P2.M6"
+title = "Stop-reason probe manifest"
+status = "done"
+
 [[phases]]
 id = "P3"
 title = "Safety-Signal Pilot"

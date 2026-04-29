@@ -72,7 +72,8 @@ Next milestone: P3.M2
 |   |-- [done] P2.M2 OpenAI benign pilot and summary
 |   |-- [done] P2.M3 Anthropic and Bedrock benign adapters
 |   |-- [done] P2.M4 Benign lifecycle comparison
-|   `-- [done] P2.M5 Scaled benign batch runner
+|   |-- [done] P2.M5 Scaled benign batch runner
+|   `-- [done] P2.M6 Stop-reason probe manifest
 |-- [in_progress] P3 Safety-Signal Pilot
 |   |-- [done] P3.M1 Redacted prompt policy
 |   |-- [done] P3.M2a Mock safety-signal harness
@@ -117,6 +118,8 @@ Out of scope for the initial phase:
 - Phase 2 real pilot plan: `docs/phase2_real_pilot_plan.md`
 - Scaled benign experiment plan: `docs/scaled_benign_experiment_plan.md`
 - Benign batch manifest example: `docs/benign_experiment_manifest.example.toml`
+- Stop reason probe plan: `docs/stop_reason_probe_plan.md`
+- Stop reason probe manifest example: `docs/stop_reason_probe_manifest.example.toml`
 - AWS Bedrock SDK configuration: `docs/bedrock_sdk_config.md`
 - OpenAI benign pilot summary: `docs/pilot_runs/openai_responses_benign_pilot.md`
 - Anthropic benign pilot summary: `docs/pilot_runs/anthropic_messages_benign_pilot.md`
@@ -175,6 +178,8 @@ llm-streaming-semantics-audit/
 |   |-- safety_prompt_registry.example.yaml
 |   |-- scaled_benign_experiment_plan.md
 |   |-- semantics_taxonomy.md
+|   |-- stop_reason_probe_manifest.example.toml
+|   |-- stop_reason_probe_plan.md
 |   `-- trace_contract.md
 |-- scripts/
 |   |-- check_p3_mock_safety_ready.py

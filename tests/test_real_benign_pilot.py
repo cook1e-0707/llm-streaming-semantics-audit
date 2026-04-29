@@ -5,7 +5,7 @@ from pathlib import Path
 
 from lssa.adapters.base import AdapterRequest
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
-from lssa.schema.events import EventType, ResponseMode
+from lssa.schema.events import EventType, ResponseMode, TerminalReasonType
 from lssa.schema.metrics import time_to_first_byte_ms
 from lssa.tracing.validator import validate_trace
 from scripts.run_real_benign_pilot import (
@@ -55,11 +55,14 @@ def test_real_pilot_network_uses_injected_fake_client(monkeypatch, capsys) -> No
         def stream_response(self, request):
             return [
                 {"type": "response.output_text.delta", "delta": "Hello"},
-                {"type": "response.completed"},
+                {
+                    "type": "response.completed",
+                    "response": {"status": "completed"},
+                },
             ]
 
         def create_response(self, request):
-            return {"output_text": "Hello"}
+            return {"output_text": "Hello", "status": "completed"}
 
     monkeypatch.setenv("OPENAI_API_KEY", "sk-not-printed")
     monkeypatch.setattr(
@@ -116,7 +119,7 @@ def test_openai_streaming_mapping_from_fake_events() -> None:
             {"type": "response.created"},
             {"type": "response.output_text.delta", "delta": "Hello"},
             {"type": "response.output_text.delta", "delta": " world"},
-            {"type": "response.completed"},
+            {"type": "response.completed", "response": {"status": "completed"}},
         ],
     )
 
@@ -126,6 +129,8 @@ def test_openai_streaming_mapping_from_fake_events() -> None:
         event.metadata.get("raw_event_type") == "response.output_text.delta"
         for event in events
     )
+    final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
+    assert final_response.metadata["provider_stop_reason"] == "completed"
 
 
 def test_openai_streaming_error_mapping_is_terminal() -> None:
@@ -191,7 +196,7 @@ def test_openai_nonstreaming_mapping_from_fake_response() -> None:
 
     events = adapter.map_nonstreaming_response(
         request,
-        {"output_text": "A careful trace records events in order."},
+        {"output_text": "A careful trace records events in order.", "status": "completed"},
     )
 
     assert validate_trace(events).ok
@@ -203,13 +208,42 @@ def test_openai_nonstreaming_mapping_from_fake_response() -> None:
         EventType.ITERATOR_END,
         EventType.SETTLED,
     ]
+    assert events[-1].terminal_reason == TerminalReasonType.COMPLETE
+
+
+def test_openai_max_output_tokens_maps_to_length_terminal_reason() -> None:
+    request = AdapterRequest(
+        trace_id="fake-openai-length",
+        prompt_id="short_text_generation",
+        prompt="Write one harmless sentence.",
+        response_mode=ResponseMode.NON_STREAMING,
+        model="fake-model",
+    )
+    adapter = OpenAIResponsesAdapter()
+
+    events = adapter.map_nonstreaming_response(
+        request,
+        {
+            "output_text": "A partial benign response",
+            "status": "incomplete",
+            "incomplete_details": {"reason": "max_output_tokens"},
+        },
+    )
+
+    assert validate_trace(events).ok
+    final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
+    assert final_response.metadata["provider_stop_reason"] == "max_output_tokens"
+    assert events[-1].terminal_reason == TerminalReasonType.LENGTH
 
 
 def test_openai_nonstreaming_run_measures_client_latency() -> None:
     class SlowFakeClient:
         def create_response(self, request):
             time.sleep(0.002)
-            return {"output_text": "A careful trace records events in order."}
+            return {
+                "output_text": "A careful trace records events in order.",
+                "status": "completed",
+            }
 
     request = AdapterRequest(
         trace_id="fake-openai-nonstreaming-run",
@@ -234,7 +268,7 @@ def test_fake_openai_pilot_writes_valid_trace(tmp_path: Path) -> None:
         mode=ResponseMode.STREAMING,
         raw_events_or_response=[
             {"type": "response.output_text.delta", "delta": "Hello"},
-            {"type": "response.completed"},
+            {"type": "response.completed", "response": {"status": "completed"}},
         ],
         output_dir=tmp_path,
     )

@@ -1,0 +1,18 @@
+title = "Stop reason probe with high benign output budget"
+providers = [
+  "openai_responses",
+  "anthropic_messages",
+  "aws_bedrock_converse",
+]
+prompt_ids = [
+  "stop_reason_probe_long_generation",
+]
+modes = [
+  "streaming",
+  "nonstreaming",
+]
+repetitions = 1
+max_output_tokens = 2048
+timeout_seconds = 120
+temperature = 0.0
+max_total_calls_without_force = 6

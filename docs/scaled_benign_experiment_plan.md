@@ -62,3 +62,11 @@ Increase only one dimension at a time:
 4. more providers
 
 Do not introduce safety prompts as part of benign scale-up.
+
+## Stop-Reason Probe
+
+Use `docs/stop_reason_probe_manifest.example.toml` when the goal is to observe
+provider terminal semantics under a larger benign output budget. The probe uses
+`max_output_tokens = 2048`, a longer timeout, and a finite benign prompt. It is
+still dry-run by default and must be run with explicit `--allow-network` for
+real provider calls.

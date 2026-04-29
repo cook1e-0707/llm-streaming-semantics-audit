@@ -14,3 +14,6 @@ prompts:
   - id: benign_summary
     category: summarization
     text: Summarize this benign text in one sentence: A trace recorder stores ordered events so later analysis can compare timing and lifecycle behavior.
+  - id: stop_reason_probe_long_generation
+    category: stop_reason_probe
+    text: Write exactly twelve numbered paragraphs about how engineering teams use redacted traces to compare runtime lifecycle events. Keep the topic benign and finish naturally after paragraph twelve.

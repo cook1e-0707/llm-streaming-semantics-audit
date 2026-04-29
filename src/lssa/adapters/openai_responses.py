@@ -101,6 +101,7 @@ class OpenAIResponsesAdapter:
             return list(recorder.events)
 
         content = _response_text(raw_response)
+        provider_stop_reason = _provider_stop_reason(raw_response)
         recorder.append(
             EventType.FIRST_BYTE,
             raw_event_type="response.completed",
@@ -112,6 +113,7 @@ class OpenAIResponsesAdapter:
             char_count=len(content) if content else None,
             raw_event_type="response.completed",
             payload_summary="complete non-streaming response",
+            metadata={"provider_stop_reason": provider_stop_reason},
         )
         recorder.append(
             EventType.ITERATOR_END,
@@ -120,7 +122,7 @@ class OpenAIResponsesAdapter:
         )
         recorder.append(
             EventType.SETTLED,
-            terminal_reason=TerminalReasonType.COMPLETE,
+            terminal_reason=_terminal_reason_from_provider_stop(provider_stop_reason),
             raw_event_type="lssa.settled",
             payload_summary="OpenAI non-streaming trace settled",
         )
@@ -145,6 +147,7 @@ class OpenAIResponsesAdapter:
 
         saw_first_byte = False
         saw_first_token = False
+        provider_stop_reason = "unknown"
         chunks: list[str] = []
         for raw_event in raw_events:
             raw_type = _raw_event_type(raw_event)
@@ -178,6 +181,7 @@ class OpenAIResponsesAdapter:
                 continue
 
             if raw_type == "response.completed":
+                provider_stop_reason = _provider_stop_reason(raw_event)
                 content = "".join(chunks)
                 recorder.append(
                     EventType.STREAM_END,
@@ -190,6 +194,7 @@ class OpenAIResponsesAdapter:
                     char_count=len(content) if content else None,
                     raw_event_type=raw_type,
                     payload_summary="assembled final streaming response",
+                    metadata={"provider_stop_reason": provider_stop_reason},
                 )
                 continue
 
@@ -223,20 +228,16 @@ class OpenAIResponsesAdapter:
                 char_count=len(content) if content else None,
                 raw_event_type="lssa.synthetic_final_response",
                 payload_summary="assembled final response from deltas",
+                metadata={"provider_stop_reason": provider_stop_reason},
             )
         recorder.append(
             EventType.ITERATOR_END,
             raw_event_type="lssa.iterator_end",
             payload_summary="stream iterator exhausted",
         )
-        terminal_reason = (
-            TerminalReasonType.ERROR
-            if any(event.event_type == EventType.ERROR for event in recorder.events)
-            else TerminalReasonType.COMPLETE
-        )
         recorder.append(
             EventType.SETTLED,
-            terminal_reason=terminal_reason,
+            terminal_reason=_terminal_reason_from_provider_stop(provider_stop_reason),
             raw_event_type="lssa.settled",
             payload_summary="OpenAI streaming trace settled",
         )
@@ -264,12 +265,14 @@ class OpenAIResponsesAdapter:
             payload_summary="non-streaming response received",
         )
         content = _response_text(raw_response)
+        provider_stop_reason = _provider_stop_reason(raw_response)
         recorder.append(
             EventType.FINAL_RESPONSE,
             content=content,
             char_count=len(content) if content else None,
             raw_event_type="response.completed",
             payload_summary="complete non-streaming response",
+            metadata={"provider_stop_reason": provider_stop_reason},
         )
         recorder.append(
             EventType.ITERATOR_END,
@@ -278,7 +281,7 @@ class OpenAIResponsesAdapter:
         )
         recorder.append(
             EventType.SETTLED,
-            terminal_reason=TerminalReasonType.COMPLETE,
+            terminal_reason=_terminal_reason_from_provider_stop(provider_stop_reason),
             raw_event_type="lssa.settled",
             payload_summary="OpenAI non-streaming trace settled",
         )
@@ -333,3 +336,36 @@ def _response_text(raw_response: Any) -> str:
     if isinstance(output_text, str):
         return output_text
     return ""
+
+
+def _provider_stop_reason(raw_response_or_event: Any) -> str:
+    response = _field(raw_response_or_event, "response") or raw_response_or_event
+    incomplete_details = _field(response, "incomplete_details")
+    incomplete_reason = _field(incomplete_details, "reason")
+    if isinstance(incomplete_reason, str):
+        return incomplete_reason
+    status = _field(response, "status")
+    if isinstance(status, str):
+        return status
+    finish_reason = _field(response, "finish_reason")
+    if isinstance(finish_reason, str):
+        return finish_reason
+    return "unknown"
+
+
+def _terminal_reason_from_provider_stop(provider_stop_reason: str) -> TerminalReasonType:
+    if provider_stop_reason in {"completed", "complete", "stop", "unknown"}:
+        return TerminalReasonType.COMPLETE
+    if provider_stop_reason in {"max_output_tokens", "max_tokens", "length"}:
+        return TerminalReasonType.LENGTH
+    if provider_stop_reason in {"content_filter", "content_filtered"}:
+        return TerminalReasonType.CONTENT_FILTER
+    if provider_stop_reason == "refusal":
+        return TerminalReasonType.REFUSAL
+    return TerminalReasonType.UNKNOWN
+
+
+def _field(value: Any, name: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(name)
+    return getattr(value, name, None)

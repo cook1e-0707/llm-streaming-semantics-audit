@@ -37,9 +37,10 @@ templates, and legacy inventory.
 
 Phase 1 is complete: the provider documentation evidence registry, generated
 provider matrix, unknown-field review, and readiness quality gate are in place.
-Phase 2 has started with a provider-neutral mock trace harness. P2.M2 is being
-prepared as a small benign-only raw API pilot. Real provider calls remain
-disabled by default and require explicit `--allow-network`.
+Phase 2 has a provider-neutral mock trace harness and a redacted OpenAI
+Responses benign pilot summary. The next step is an Anthropic benign adapter and
+pilot, still defaulting to dry-run with explicit `--allow-network` for real
+provider calls.
 
 ## Project Progress
 
@@ -50,7 +51,7 @@ README by `python scripts/update_readme_status.py`.
 ```text
 Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
 Current phase: P2
-Next milestone: P2.M2
+Next milestone: P2.M3
 
 |-- [done] P0 Research Contract and Measurement Schema
 |   |-- [done] P0.M1 Repository scaffold
@@ -66,8 +67,9 @@ Next milestone: P2.M2
 |   `-- [done] P1.M5 Phase 1 readiness quality gate
 |-- [in_progress] P2 Raw API Benign Pilot
 |   |-- [done] P2.M1 Provider adapter interface
-|   |-- [in_progress] P2.M2 Benign streaming trace collection
-|   `-- [planned] P2.M3 Trace quality checks
+|   |-- [done] P2.M2 OpenAI benign pilot and summary
+|   |-- [next] P2.M3 Anthropic benign adapter and pilot
+|   `-- [planned] P2.M4 Benign lifecycle comparison
 |-- [deferred] P3 Safety-Signal Pilot
 |   |-- [planned] P3.M1 Redacted prompt policy
 |   |-- [planned] P3.M2 Safety signal timing traces
@@ -109,6 +111,7 @@ Out of scope for the initial phase:
 - Phase 1 readiness gate: `docs/phase1_quality_gate.md`
 - Phase 2 plan: `docs/phase2_plan.md`
 - Phase 2 real pilot plan: `docs/phase2_real_pilot_plan.md`
+- OpenAI benign pilot summary: `docs/pilot_runs/openai_responses_benign_pilot.md`
 - Trace contract: `docs/trace_contract.md`
 - Benign pilot policy: `docs/benign_pilot_policy.md`
 - Real API data policy: `docs/real_api_data_policy.md`
@@ -121,6 +124,8 @@ Out of scope for the initial phase:
 ```text
 llm-streaming-semantics-audit/
 |-- docs/
+|   |-- pilot_runs/
+|   |   `-- openai_responses_benign_pilot.md
 |   |-- source_notes/
 |   |   |-- anthropic.md
 |   |   |-- aws_bedrock.md
@@ -152,6 +157,7 @@ llm-streaming-semantics-audit/
 |   |-- provider_evidence.py
 |   |-- run_mock_pilot.py
 |   |-- run_real_benign_pilot.py
+|   |-- summarize_real_pilot.py
 |   |-- update_readme_status.py
 |   `-- validate_provider_matrix.py
 |-- src/
@@ -186,6 +192,7 @@ llm-streaming-semantics-audit/
 |   |-- test_provider_matrix.py
 |   |-- test_readme_status.py
 |   |-- test_real_benign_pilot.py
+|   |-- test_real_pilot_summary.py
 |   |-- test_trace_recorder.py
 |   `-- test_trace_validator.py
 |-- .env.example

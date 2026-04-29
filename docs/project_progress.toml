@@ -1,5 +1,5 @@
 current_phase = "P2"
-next_milestone = "P2.M2"
+next_milestone = "P2.M3"
 
 [status_labels]
 done = "done"
@@ -84,12 +84,17 @@ status = "done"
 
 [[phases.milestones]]
 id = "P2.M2"
-title = "Benign streaming trace collection"
-status = "in_progress"
+title = "OpenAI benign pilot and summary"
+status = "done"
 
 [[phases.milestones]]
 id = "P2.M3"
-title = "Trace quality checks"
+title = "Anthropic benign adapter and pilot"
+status = "next"
+
+[[phases.milestones]]
+id = "P2.M4"
+title = "Benign lifecycle comparison"
 status = "planned"
 
 [[phases]]

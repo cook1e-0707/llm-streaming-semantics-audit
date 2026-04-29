@@ -39,6 +39,9 @@ SKIP_RELATIVE_DIRS = {
     Path("data/raw"),
     Path("data/processed"),
 }
+SKIP_FILE_NAMES = {
+    ".env",
+}
 
 
 @dataclass(frozen=True)
@@ -392,7 +395,13 @@ def _should_skip(root: Path, path: Path) -> bool:
     if path.is_dir() and path.name in SKIP_DIR_NAMES:
         return True
     relative = path.relative_to(root)
-    return path.is_dir() and relative in SKIP_RELATIVE_DIRS
+    if path.is_dir() and relative in SKIP_RELATIVE_DIRS:
+        return True
+    if path.is_file() and path.name in SKIP_FILE_NAMES:
+        return True
+    if path.is_file() and path.name.startswith(".env.") and path.name != ".env.example":
+        return True
+    return False
 
 
 if __name__ == "__main__":

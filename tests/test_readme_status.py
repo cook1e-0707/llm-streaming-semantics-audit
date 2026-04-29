@@ -100,6 +100,9 @@ def test_generate_project_tree_skips_local_outputs(tmp_path: Path) -> None:
     (tmp_path / "docs" / "metrics.md").write_text("# Metrics\n", encoding="utf-8")
     (tmp_path / ".git").mkdir()
     (tmp_path / ".venv").mkdir()
+    (tmp_path / ".env").write_text("SECRET=value\n", encoding="utf-8")
+    (tmp_path / ".env.local").write_text("SECRET=value\n", encoding="utf-8")
+    (tmp_path / ".env.example").write_text("EXAMPLE=\n", encoding="utf-8")
     (tmp_path / "results").mkdir()
     (tmp_path / "data" / "raw").mkdir(parents=True)
     (tmp_path / "src").mkdir()
@@ -108,6 +111,9 @@ def test_generate_project_tree_skips_local_outputs(tmp_path: Path) -> None:
 
     assert ".git" not in tree
     assert ".venv" not in tree
+    assert ".env\n" not in tree
+    assert ".env.local" not in tree
+    assert ".env.example" in tree
     assert "results" not in tree
     assert "raw" not in tree
     assert "docs/" in tree

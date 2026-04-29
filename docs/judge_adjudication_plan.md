@@ -1,46 +1,69 @@
-# Optional Judge Adjudication Plan
+# P3.M4 Judge Adjudication Plan
 
 The judge layer is optional and separate from provider ground truth. It may be
-used later to label prompt or output semantics, but it must not replace provider
-events such as `provider_stop_reason`, `terminal_reason`, `refusal`, or
-`content_filter`.
+used to label prompt or output semantics after safety traces exist, but it must
+not replace provider events such as `provider_stop_reason`, `terminal_reason`,
+`refusal`, `content_filter`, or validation annotations.
 
-## NVIDIA Guard Models
+## NVIDIA Guard Profiles
 
-NVIDIA documents content-safety models that can act as moderators for prompts
-and responses. The hosted API catalog includes `nvidia/nemotron-3-content-safety`
-and related guard models. NVIDIA NeMo Platform documentation also lists
-`nvidia/llama-3.1-nemotron-safety-guard-8b-v3` for content safety and notes that
-content-safety NIMs expose OpenAI-compatible chat-completions endpoints.
+P3.M4 uses two NVIDIA NIM guard-model profiles through the OpenAI-compatible
+chat-completions surface. NVIDIA documents
+`nvidia/llama-3.1-nemotron-safety-guard-8b-v3` as a content-safety model, and
+documents `meta/llama-guard-4-12b` as a safety classifier for prompts and
+responses.
 
 Default local configuration:
 
 ```bash
 LSSA_JUDGE_PROVIDER=nvidia_nim
-LSSA_JUDGE_API_KEY_ENV=NVIDIA_API_KEY_A
 LSSA_JUDGE_BASE_URL=https://integrate.api.nvidia.com/v1
-LSSA_JUDGE_MODEL=nvidia/llama-3.1-nemoguard-8b-content-safety
+
+LSSA_JUDGE_A_API_KEY_ENV=NVIDIA_API_KEY_A
+LSSA_JUDGE_A_MODEL=nvidia/llama-3.1-nemotron-safety-guard-8b-v3
+
+LSSA_JUDGE_B_API_KEY_ENV=NVIDIA_API_KEY_B
+LSSA_JUDGE_B_MODEL=meta/llama-guard-4-12b
 ```
 
-The model name is configurable because NVIDIA exposes multiple guard-family
-models and available model IDs may differ across hosted and self-hosted NIM
-environments.
+Profile A omits `max_tokens` by default because the NVIDIA NIM reference for
+`nvidia/llama-3.1-nemotron-safety-guard-8b-v3` does not list that body
+parameter. Profile B sends `max_tokens=30`, matching the narrow output range
+documented for `meta/llama-guard-4-12b`.
+
+## Official References
+
+- `nvidia/llama-3.1-nemotron-safety-guard-8b-v3`:
+  `https://docs.api.nvidia.com/nim/reference/nvidia-llama-3_1-nemotron-safety-guard-8b-v3`
+- Nemotron safety guard inference endpoint:
+  `https://docs.api.nvidia.com/nim/reference/nvidia-llama-3_1-nemotron-safety-guard-8b-v3-infer`
+- `meta/llama-guard-4-12b`:
+  `https://docs.api.nvidia.com/nim/reference/meta-llama-guard-4-12b`
+- Llama Guard 4 inference endpoint:
+  `https://docs.api.nvidia.com/nim/reference/meta-llama-guard-4-12b-infer`
 
 ## Credential Policy
 
 Do not paste NVIDIA API keys into chat, docs, scripts, tests, or tracked files.
-If a key has been exposed, rotate it before use. The runner stores only the env
-var name, not the key value.
+If a key has been exposed outside the local `.env`, rotate it before use. The
+runner stores only environment variable names, never key values.
 
 ## Dry Run
 
+Dry run is the default. It writes a redacted plan under ignored `artifacts/` and
+does not load raw prompt text.
+
 ```bash
-python scripts/run_judge_adjudication.py --limit 1 --max-calls 1
+python scripts/run_judge_adjudication.py --judge-profile all --limit 1 --max-calls 2
 python scripts/check_judge_ready.py
 ```
 
-Dry-run mode writes a redacted plan under ignored `artifacts/` and does not load
-raw prompt text.
+Run one profile at a time when isolating model behavior:
+
+```bash
+python scripts/run_judge_adjudication.py --judge-profile a --limit 1 --max-calls 1
+python scripts/run_judge_adjudication.py --judge-profile b --limit 1 --max-calls 1
+```
 
 ## Network Opt-In
 
@@ -48,17 +71,21 @@ Judge calls require all three flags:
 
 ```bash
 python scripts/run_judge_adjudication.py \
+  --judge-profile all \
   --limit 1 \
-  --max-calls 1 \
+  --max-calls 2 \
   --allow-judge-network \
   --allow-safety-prompts \
   --reviewed-source
 ```
 
-Outputs are redacted by default. The runner stores normalized labels, raw judge
-response length, and a hash of the judge response, not raw prompt text.
+The runner refuses to load raw safety prompt text unless those flags are
+present. Output files store normalized labels, raw judge response length, and a
+hash of the judge response, not raw prompt text.
 
 ## Interpretation
 
 Judge labels are secondary annotations. They can support later analysis of
-ambiguous outputs, but they are not evidence of provider runtime semantics.
+ambiguous outputs, but they are not evidence of provider runtime semantics and
+must not be used to claim a provider released, filtered, refused, or settled a
+stream at a specific point in time.

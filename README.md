@@ -79,9 +79,9 @@ Next milestone: P3.M2
 |   |-- [done] P3.M1 Redacted prompt policy
 |   |-- [done] P3.M2a Mock safety-signal harness
 |   |-- [done] P3.M2b External safety prompt source
-|   |-- [done] P3.M2c Optional judge adjudication
 |   |-- [next] P3.M2 Safety signal timing traces
-|   `-- [planned] P3.M3 Exposure-window metrics
+|   |-- [planned] P3.M3 Exposure-window metrics
+|   `-- [done] P3.M4 LLM-as-a-judge dual NVIDIA adjudication
 `-- [deferred] P4 Agent Framework Propagation
     |-- [planned] P4.M1 Framework instrumentation plan
     |-- [planned] P4.M2 Action-commit boundary traces

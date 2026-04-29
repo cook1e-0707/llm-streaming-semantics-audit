@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 
 from lssa.judging.nvidia import (
+    DEFAULT_NVIDIA_GUARD_MODEL_A,
+    DEFAULT_NVIDIA_GUARD_MODEL_B,
     NvidiaGuardJudge,
     NvidiaJudgeConfig,
     parse_guard_label,
@@ -40,11 +42,30 @@ def test_nvidia_judge_with_fake_client_returns_redacted_result() -> None:
     payload = result.to_redacted_dict()
 
     assert payload["label"] == "unsafe"
+    assert payload["judge_profile"] == "a"
     assert payload["judge_model"] == "fake-guard-model"
     assert "redacted test prompt body" not in json.dumps(payload)
 
 
-def test_judge_dry_run_writes_redacted_plan(tmp_path: Path) -> None:
+def test_nvidia_judge_profile_configs(monkeypatch) -> None:
+    _clear_judge_env(monkeypatch)
+
+    profile_a = NvidiaJudgeConfig.from_env_profile("a")
+    profile_b = NvidiaJudgeConfig.from_env_profile("b")
+
+    assert profile_a.profile == "a"
+    assert profile_a.api_key_env == "NVIDIA_API_KEY_A"
+    assert profile_a.model == DEFAULT_NVIDIA_GUARD_MODEL_A
+    assert profile_a.max_tokens is None
+    assert profile_b.profile == "b"
+    assert profile_b.api_key_env == "NVIDIA_API_KEY_B"
+    assert profile_b.model == DEFAULT_NVIDIA_GUARD_MODEL_B
+    assert profile_b.max_tokens == 30
+
+
+def test_judge_dry_run_writes_redacted_dual_profile_plan(tmp_path: Path, monkeypatch) -> None:
+    _clear_judge_env(monkeypatch)
+
     prompt_root = tmp_path / "source"
     plan_dir = Path("artifacts/test_judge_plan")
     _write_safety_jsonl(prompt_root / "sample.jsonl")
@@ -56,7 +77,9 @@ def test_judge_dry_run_writes_redacted_plan(tmp_path: Path) -> None:
             "--limit",
             "1",
             "--max-calls",
-            "1",
+            "2",
+            "--judge-profile",
+            "all",
             "--plan-dir",
             str(plan_dir),
         ]
@@ -67,8 +90,45 @@ def test_judge_dry_run_writes_redacted_plan(tmp_path: Path) -> None:
     payload = json.loads(plan_path.read_text(encoding="utf-8"))
     serialized = json.dumps(payload)
     assert payload["raw_text_in_plan"] is False
-    assert payload["judge_api_key_env"] == "NVIDIA_API_KEY_A"
+    assert payload["planned_calls"] == 2
+    assert payload["judge_profile"] == "all"
+    assert payload["judges"] == [
+        {
+            "judge_api_key_env": "NVIDIA_API_KEY_A",
+            "judge_model": DEFAULT_NVIDIA_GUARD_MODEL_A,
+            "judge_profile": "a",
+            "max_tokens": None,
+            "temperature": 0,
+        },
+        {
+            "judge_api_key_env": "NVIDIA_API_KEY_B",
+            "judge_model": DEFAULT_NVIDIA_GUARD_MODEL_B,
+            "judge_profile": "b",
+            "max_tokens": 30,
+            "temperature": 0,
+        },
+    ]
     assert "redacted test prompt body" not in serialized
+
+
+def test_dual_profile_dry_run_respects_max_calls(tmp_path: Path) -> None:
+    prompt_root = tmp_path / "source"
+    _write_safety_jsonl(prompt_root / "sample.jsonl")
+
+    exit_code = judge_main(
+        [
+            "--prompt-root",
+            str(prompt_root),
+            "--limit",
+            "1",
+            "--max-calls",
+            "1",
+            "--judge-profile",
+            "all",
+        ]
+    )
+
+    assert exit_code == 2
 
 
 def test_judge_requires_network_opt_in_before_loading_text(
@@ -150,3 +210,16 @@ def _write_safety_jsonl(path: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
+
+
+def _clear_judge_env(monkeypatch) -> None:
+    for name in (
+        "LSSA_JUDGE_API_KEY_ENV",
+        "LSSA_JUDGE_MODEL",
+        "LSSA_JUDGE_A_API_KEY_ENV",
+        "LSSA_JUDGE_A_MODEL",
+        "LSSA_JUDGE_B_API_KEY_ENV",
+        "LSSA_JUDGE_B_MODEL",
+        "LSSA_JUDGE_BASE_URL",
+    ):
+        monkeypatch.delenv(name, raising=False)

@@ -129,11 +129,6 @@ title = "External safety prompt source"
 status = "done"
 
 [[phases.milestones]]
-id = "P3.M2c"
-title = "Optional judge adjudication"
-status = "done"
-
-[[phases.milestones]]
 id = "P3.M2"
 title = "Safety signal timing traces"
 status = "next"
@@ -142,6 +137,11 @@ status = "next"
 id = "P3.M3"
 title = "Exposure-window metrics"
 status = "planned"
+
+[[phases.milestones]]
+id = "P3.M4"
+title = "LLM-as-a-judge dual NVIDIA adjudication"
+status = "done"
 
 [[phases]]
 id = "P4"

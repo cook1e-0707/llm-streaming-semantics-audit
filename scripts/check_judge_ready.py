@@ -83,6 +83,7 @@ def _judge_runner_guard_check(root: Path) -> GateCheck:
         return GateCheck(name="judge_runner_requires_opt_in", ok=False, detail="missing runner")
     content = script_path.read_text(encoding="utf-8")
     required = [
+        "--judge-profile",
         "--allow-judge-network",
         "--allow-safety-prompts",
         "--reviewed-source",
@@ -101,7 +102,9 @@ def _judge_dry_run_check(root: Path, prompt_root: Path | None) -> GateCheck:
         "--limit",
         "1",
         "--max-calls",
-        "1",
+        "2",
+        "--judge-profile",
+        "all",
         "--plan-dir",
         str(root / "artifacts" / "judge_ready"),
     ]

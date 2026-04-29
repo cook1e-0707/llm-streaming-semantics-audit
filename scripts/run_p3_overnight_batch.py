@@ -41,6 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit-per-provider-mode", type=int, default=10)
     parser.add_argument("--judge-limit", type=int, default=10)
     parser.add_argument("--judge-profile", choices=SUPPORTED_JUDGE_PROFILES, default="all")
+    parser.add_argument("--judge-responses", action="store_true")
     parser.add_argument("--max-output-tokens", type=int, default=512)
     parser.add_argument("--timeout-seconds", type=int, default=90)
     parser.add_argument("--temperature", type=float, default=0)
@@ -77,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         failed = ", ".join(check.name for check in safety_ready.checks if not check.ok)
         print(f"P3 safety pilot readiness failed: {failed}", file=sys.stderr)
         return 1
-    if args.judge_limit:
+    if args.judge_limit or args.judge_responses:
         judge_ready = check_judge_ready(ROOT, args.prompt_root)
         if not judge_ready.ready:
             failed = ", ".join(check.name for check in judge_ready.checks if not check.ok)
@@ -167,6 +168,18 @@ def _safety_command(
         command.append("--allow-network")
     if args.allow_safety_prompts:
         command.append("--allow-safety-prompts")
+    if args.judge_responses:
+        command.extend(
+            [
+                "--judge-responses",
+                "--judge-profile",
+                args.judge_profile,
+                "--response-judge-output-dir",
+                str(run_root / "response_judge"),
+            ]
+        )
+    if args.allow_judge_network:
+        command.append("--allow-judge-network")
     if args.reviewed_source:
         command.append("--reviewed-source")
     return command
@@ -238,6 +251,7 @@ def _write_manifest(
         "limit_per_provider_mode": args.limit_per_provider_mode,
         "judge_limit": args.judge_limit,
         "judge_profile": args.judge_profile,
+        "judge_responses": args.judge_responses,
         "max_output_tokens": args.max_output_tokens,
         "timeout_seconds": args.timeout_seconds,
         "temperature": args.temperature,
@@ -266,15 +280,18 @@ def _write_summary(run_root: Path) -> Path:
         "raw_text_committed": False,
         "safety_trace_count": 0,
         "judge_result_count": 0,
+        "response_judge_result_count": 0,
         "terminal_reasons": {},
         "provider_stop_reasons": {},
         "event_type_counts": {},
         "judge_labels": {},
+        "response_judge_labels": {},
     }
     terminal_reasons: Counter[str] = Counter()
     provider_stop_reasons: Counter[str] = Counter()
     event_type_counts: Counter[str] = Counter()
     judge_labels: Counter[str] = Counter()
+    response_judge_labels: Counter[str] = Counter()
 
     for path in sorted((run_root / "safety_signal").rglob("*.summary.json")):
         try:
@@ -300,10 +317,19 @@ def _write_summary(run_root: Path) -> Path:
         summary["judge_result_count"] += 1
         judge_labels[str(payload.get("label") or "unknown")] += 1
 
+    for path in sorted((run_root / "response_judge").rglob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        summary["response_judge_result_count"] += 1
+        response_judge_labels[str(payload.get("label") or "unknown")] += 1
+
     summary["terminal_reasons"] = dict(sorted(terminal_reasons.items()))
     summary["provider_stop_reasons"] = dict(sorted(provider_stop_reasons.items()))
     summary["event_type_counts"] = dict(sorted(event_type_counts.items()))
     summary["judge_labels"] = dict(sorted(judge_labels.items()))
+    summary["response_judge_labels"] = dict(sorted(response_judge_labels.items()))
     path = run_root / "p3_overnight_summary.json"
     path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
     return path

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -19,6 +20,12 @@ from lssa.adapters.anthropic_messages import AnthropicMessagesAdapter, Anthropic
 from lssa.adapters.aws_bedrock_converse import AwsBedrockConverseAdapter, AwsBedrockConverseClient
 from lssa.adapters.base import AdapterRequest
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
+from lssa.judging.nvidia import (
+    NVIDIA_JUDGE_PROVIDER,
+    SUPPORTED_NVIDIA_JUDGE_PROFILES,
+    NvidiaGuardJudge,
+    NvidiaJudgeConfig,
+)
 from lssa.prompts.safety_external import (
     SAFETY_PROMPT_ROOT_ENV,
     SafetyPromptRecord,
@@ -32,6 +39,8 @@ from lssa.utils.aws_bedrock import AWS_BEARER_TOKEN_BEDROCK_ENV, BedrockRuntimeS
 
 DEFAULT_OUTPUT_DIR = Path("artifacts/safety_signal_pilot")
 DEFAULT_PLAN_DIR = Path("artifacts/safety_signal_plans")
+DEFAULT_RESPONSE_JUDGE_OUTPUT_DIR = Path("artifacts/response_judge")
+JUDGE_PROFILE_CHOICES = (*SUPPORTED_NVIDIA_JUDGE_PROFILES, "all")
 SUPPORTED_PROVIDERS = {
     "anthropic_messages",
     "aws_bedrock_converse",
@@ -60,10 +69,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--aws-region")
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--allow-safety-prompts", action="store_true")
+    parser.add_argument("--judge-responses", action="store_true")
+    parser.add_argument("--judge-profile", choices=JUDGE_PROFILE_CHOICES, default="all")
+    parser.add_argument("--allow-judge-network", action="store_true")
     parser.add_argument("--reviewed-source", action="store_true")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--plan-dir", type=Path, default=DEFAULT_PLAN_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--response-judge-output-dir",
+        type=Path,
+        default=DEFAULT_RESPONSE_JUDGE_OUTPUT_DIR,
+    )
     args = parser.parse_args(argv)
 
     if args.limit < 1:
@@ -78,8 +95,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_calls > MAX_CALLS_WITHOUT_FORCE and not args.force:
         print("safety max calls exceeds conservative limit; use --force after review", file=sys.stderr)
         return 2
-    if not _is_ignored_output_dir(args.plan_dir) or not _is_ignored_output_dir(args.output_dir):
+    if (
+        not _is_ignored_output_dir(args.plan_dir)
+        or not _is_ignored_output_dir(args.output_dir)
+        or not _is_ignored_output_dir(args.response_judge_output_dir)
+    ):
         print("plan/output directories must be under ignored artifacts/", file=sys.stderr)
+        return 2
+    if args.judge_responses and args.allow_judge_network and not args.allow_network:
+        print("--judge-responses requires provider --allow-network", file=sys.stderr)
         return 2
 
     try:
@@ -115,6 +139,9 @@ def main(argv: list[str] | None = None) -> int:
     if not args.reviewed_source:
         print("--reviewed-source is required before safety prompt network calls", file=sys.stderr)
         return 2
+    if args.judge_responses and not args.allow_judge_network:
+        print("--allow-judge-network is required for response-level judge calls", file=sys.stderr)
+        return 2
 
     try:
         return _run_network_pilot(args, records)
@@ -128,6 +155,10 @@ def _run_network_pilot(
     records: list[SafetyPromptRecord],
 ) -> int:
     adapter = _adapter_for_provider(args)
+    judge_configs = _judge_configs_for_profile(args.judge_profile) if args.judge_responses else []
+    for config in judge_configs:
+        config.require_api_key()
+    judges = [NvidiaGuardJudge(config=config) for config in judge_configs]
     failures = 0
     for record in records:
         if record.prompt_text is None:
@@ -164,6 +195,18 @@ def _run_network_pilot(
             )
             failures += 1
             continue
+        judge_failure_count = 0
+        if judges:
+            judge_failure_count = _judge_final_response(
+                judges,
+                request=request,
+                record=record,
+                provider_name=args.provider,
+                mode_name=args.mode,
+                events=events,
+                output_dir=args.response_judge_output_dir,
+            )
+            failures += judge_failure_count
         validation = validate_trace(events)
         recorder = TraceRecorder(
             trace_id=request.trace_id,
@@ -188,6 +231,7 @@ def _run_network_pilot(
         print(
             f"provider={args.provider} mode={args.mode} status={status} "
             f"prompt_id={record.prompt_id} events={len(events)} "
+            f"response_judge_failures={judge_failure_count} "
             f"trace={trace_path} summary={summary_path}"
         )
     return 1 if failures else 0
@@ -211,8 +255,13 @@ def _write_redacted_plan(
         "temperature": args.temperature,
         "allow_network": args.allow_network,
         "allow_safety_prompts": args.allow_safety_prompts,
+        "judge_responses": args.judge_responses,
+        "judge_profile": args.judge_profile,
+        "allow_judge_network": args.allow_judge_network,
+        "response_judge_output_dir": str(args.response_judge_output_dir),
         "reviewed_source": args.reviewed_source,
         "raw_text_committed": False,
+        "raw_provider_output_committed": False,
         "raw_text_in_plan": False,
         "records": [record.to_redacted_dict() for record in records],
     }
@@ -277,6 +326,125 @@ def _pilot_status(events: list[StreamEvent], validation_ok: bool) -> str:
 
 def _model_for_provider(args: argparse.Namespace) -> str:
     return args.model or DEFAULT_MODELS[args.provider]
+
+
+def _judge_configs_for_profile(profile: str) -> list[NvidiaJudgeConfig]:
+    if profile == "all":
+        return [NvidiaJudgeConfig.from_env_profile(item) for item in SUPPORTED_NVIDIA_JUDGE_PROFILES]
+    return [NvidiaJudgeConfig.from_env_profile(profile)]
+
+
+def _judge_final_response(
+    judges: list[NvidiaGuardJudge],
+    *,
+    request: AdapterRequest,
+    record: SafetyPromptRecord,
+    provider_name: str,
+    mode_name: str,
+    events: list[StreamEvent],
+    output_dir: Path,
+) -> int:
+    final_response = _final_response_content(events)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    failures = 0
+    for judge in judges:
+        base_payload = {
+            "judge_subject": "provider_final_response",
+            "judge_provider": NVIDIA_JUDGE_PROVIDER,
+            "judge_profile": judge.config.profile,
+            "judge_model": judge.config.model,
+            "provider": provider_name,
+            "mode": mode_name,
+            "trace_id": request.trace_id,
+            "prompt_id": record.prompt_id,
+            "source_file": record.source_file,
+            "source_line": record.line_number,
+            "benchmark": record.benchmark,
+            "category": record.category,
+            "language": record.language,
+            "raw_prompt_committed": False,
+            "raw_provider_output_committed": False,
+        }
+        result_path = (
+            output_dir
+            / provider_name
+            / _safe_id(record.prompt_id)
+            / mode_name
+            / f"response-judge-{judge.config.profile}-{uuid4().hex}.json"
+        )
+        result_path.parent.mkdir(parents=True, exist_ok=True)
+        if not final_response:
+            payload = dict(base_payload)
+            payload.update(
+                {
+                    "label": "no_output",
+                    "response_judge_call_made": False,
+                    "raw_provider_output_sha256": None,
+                    "raw_provider_output_chars": 0,
+                    "raw_response_committed": False,
+                }
+            )
+            result_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+            print(
+                f"response_judge provider={provider_name} mode={mode_name} "
+                f"judge_profile={judge.config.profile} status=skipped_no_output "
+                f"prompt_id={record.prompt_id} result={result_path}"
+            )
+            continue
+        try:
+            result = judge.classify_prompt(
+                prompt_id=f"{request.trace_id}:{record.prompt_id}:response",
+                prompt_text=final_response,
+            )
+        except Exception as exc:  # noqa: BLE001 - CLI suppresses provider tracebacks.
+            failures += 1
+            payload = dict(base_payload)
+            payload.update(
+                {
+                    "label": "judge_error",
+                    "response_judge_call_made": True,
+                    "error_type": type(exc).__name__,
+                    "raw_provider_output_sha256": hashlib.sha256(
+                        final_response.encode("utf-8")
+                    ).hexdigest(),
+                    "raw_provider_output_chars": len(final_response),
+                    "raw_response_committed": False,
+                }
+            )
+            result_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+            print(
+                f"response_judge provider={provider_name} mode={mode_name} "
+                f"judge_profile={judge.config.profile} status=error "
+                f"prompt_id={record.prompt_id} error_type={type(exc).__name__} "
+                f"result={result_path}",
+                file=sys.stderr,
+            )
+            continue
+        payload = dict(base_payload)
+        payload.update(result.to_redacted_dict())
+        payload.update(
+            {
+                "response_judge_call_made": True,
+                "raw_provider_output_sha256": hashlib.sha256(
+                    final_response.encode("utf-8")
+                ).hexdigest(),
+                "raw_provider_output_chars": len(final_response),
+            }
+        )
+        result_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        print(
+            f"response_judge provider={provider_name} mode={mode_name} "
+            f"judge_profile={judge.config.profile} status=ok prompt_id={record.prompt_id} "
+            f"label={result.label} result={result_path}"
+        )
+    return failures
+
+
+def _final_response_content(events: list[StreamEvent]) -> str | None:
+    for event in reversed(events):
+        if event.event_type == EventType.FINAL_RESPONSE:
+            return event.content
+    return None
 
 
 def _is_ignored_output_dir(path: Path) -> bool:

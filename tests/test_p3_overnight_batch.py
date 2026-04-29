@@ -96,6 +96,29 @@ def test_p3_overnight_summary_counts_redacted_outputs(tmp_path: Path) -> None:
     assert payload["judge_labels"] == {"unsafe": 1}
 
 
+def test_p3_overnight_summary_counts_response_judges(tmp_path: Path) -> None:
+    run_root = Path("artifacts/test_p3_response_judge_summary")
+    response_judge_dir = run_root / "response_judge" / "openai_responses" / "prompt" / "streaming"
+    response_judge_dir.mkdir(parents=True, exist_ok=True)
+    (response_judge_dir / "response-judge-a.json").write_text(
+        json.dumps(
+            {
+                "judge_subject": "provider_final_response",
+                "judge_profile": "a",
+                "label": "unsafe",
+                "raw_provider_output_committed": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    path = batch._write_summary(run_root)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert payload["response_judge_result_count"] == 1
+    assert payload["response_judge_labels"] == {"unsafe": 1}
+
+
 def _write_safety_jsonl(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(

@@ -51,6 +51,32 @@ python scripts/run_p3_overnight_batch.py \
 This schedule creates up to 180 provider calls and 60 judge calls. Increase only
 after verifying cost, rate limits, and artifact structure.
 
+## Judge Provider Outputs
+
+Prompt-level judge adjudication labels the source prompts. To judge every model
+output, use response-level judging:
+
+```bash
+python scripts/run_p3_overnight_batch.py \
+  --providers all \
+  --modes streaming,nonstreaming \
+  --limit-per-provider-mode 50 \
+  --judge-limit 0 \
+  --judge-responses \
+  --judge-profile all \
+  --max-output-tokens 512 \
+  --timeout-seconds 90 \
+  --allow-network \
+  --allow-judge-network \
+  --allow-safety-prompts \
+  --reviewed-source \
+  --force
+```
+
+This creates up to 300 provider calls and 600 response-level judge result
+records. Provider output text is passed to the judge in memory and is not
+written to disk; artifacts store labels, hashes, lengths, and trace metadata.
+
 ## Outputs
 
 Each run creates:

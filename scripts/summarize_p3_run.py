@@ -66,6 +66,7 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
 
     trace_paths = sorted((run_root / "safety_signal").rglob("*.jsonl"))
     judge_paths = sorted((run_root / "judge_adjudication").glob("*.json"))
+    response_judge_paths = sorted((run_root / "response_judge").rglob("*.json"))
     by_provider_mode: Counter[str] = Counter()
     event_type_counts: Counter[str] = Counter()
     terminal_reasons: Counter[str] = Counter()
@@ -133,6 +134,17 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
         judge_labels[str(payload.get("label") or "unknown")] += 1
         judge_profiles[str(payload.get("judge_profile") or "unknown")] += 1
 
+    response_judge_labels: Counter[str] = Counter()
+    response_judge_profiles: Counter[str] = Counter()
+    response_judge_subjects: Counter[str] = Counter()
+    response_judge_calls: Counter[str] = Counter()
+    for path in response_judge_paths:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        response_judge_labels[str(payload.get("label") or "unknown")] += 1
+        response_judge_profiles[str(payload.get("judge_profile") or "unknown")] += 1
+        response_judge_subjects[str(payload.get("judge_subject") or "unknown")] += 1
+        response_judge_calls[str(payload.get("response_judge_call_made"))] += 1
+
     return {
         "run_root": str(run_root),
         "raw_text_committed": False,
@@ -140,6 +152,7 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
         "streaming_trace_count": streaming_trace_count,
         "nonstreaming_trace_count": nonstreaming_trace_count,
         "judge_result_count": len(judge_paths),
+        "response_judge_result_count": len(response_judge_paths),
         "by_provider_mode": dict(sorted(by_provider_mode.items())),
         "event_type_counts": dict(sorted(event_type_counts.items())),
         "terminal_reasons": dict(sorted(terminal_reasons.items())),
@@ -155,6 +168,10 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
         },
         "judge_labels": dict(sorted(judge_labels.items())),
         "judge_profiles": dict(sorted(judge_profiles.items())),
+        "response_judge_labels": dict(sorted(response_judge_labels.items())),
+        "response_judge_profiles": dict(sorted(response_judge_profiles.items())),
+        "response_judge_subjects": dict(sorted(response_judge_subjects.items())),
+        "response_judge_calls": dict(sorted(response_judge_calls.items())),
     }
 
 

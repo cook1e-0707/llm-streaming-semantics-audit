@@ -2,12 +2,14 @@ import json
 from pathlib import Path
 
 from lssa.prompts.safety_external import (
+    SafetyPromptRecord,
     inventory_safety_prompt_root,
     iter_safety_prompt_records,
 )
+from lssa.schema.events import EventType, Layer, StreamEvent
 from scripts.check_p3_safety_pilot_ready import check_p3_safety_pilot_ready, main as check_main
 from scripts.inspect_external_safety_prompts import main as inspect_main
-from scripts.run_safety_signal_pilot import main as pilot_main
+from scripts.run_safety_signal_pilot import _judge_final_response, main as pilot_main
 
 
 def test_external_safety_inventory_is_redacted(tmp_path: Path) -> None:
@@ -167,6 +169,79 @@ def test_p3_safety_pilot_ready_with_temp_prompt_root(tmp_path: Path, capsys) -> 
     assert result.real_safety_calls_allowed_by_default is False
     assert exit_code == 0
     assert payload["real_safety_calls_allowed_by_default"] is False
+
+
+def test_response_judge_writes_redacted_output_result(tmp_path: Path) -> None:
+    class FakeConfig:
+        profile = "a"
+        model = "fake-judge-model"
+
+    class FakeResult:
+        label = "unsafe"
+
+        def to_redacted_dict(self):
+            return {
+                "judge_provider": "nvidia_nim",
+                "judge_profile": "a",
+                "judge_model": "fake-judge-model",
+                "prompt_id": "trace-1:safety-test-1:response",
+                "label": self.label,
+                "raw_response_sha256": "judge-response-hash",
+                "raw_response_chars": 6,
+                "raw_response_committed": False,
+            }
+
+    class FakeJudge:
+        config = FakeConfig()
+
+        def classify_prompt(self, *, prompt_id: str, prompt_text: str):
+            assert prompt_id == "trace-1:safety-test-1:response"
+            assert prompt_text == "provider output that must not be committed"
+            return FakeResult()
+
+    class FakeRequest:
+        trace_id = "trace-1"
+
+    record = SafetyPromptRecord(
+        prompt_id="safety-test-1",
+        source_file="sample.jsonl",
+        line_number=1,
+        benchmark="unit_test",
+        category="redacted_category",
+        language="en",
+    )
+    events = [
+        StreamEvent(
+            trace_id="trace-1",
+            event_type=EventType.FINAL_RESPONSE,
+            layer=Layer.PROVIDER,
+            timestamp_ms=1,
+            sequence_index=0,
+            content="provider output that must not be committed",
+        )
+    ]
+
+    failures = _judge_final_response(
+        [FakeJudge()],
+        request=FakeRequest(),
+        record=record,
+        provider_name="openai_responses",
+        mode_name="streaming",
+        events=events,
+        output_dir=tmp_path / "response_judge",
+    )
+
+    assert failures == 0
+    result_path = next((tmp_path / "response_judge").rglob("*.json"))
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    serialized = json.dumps(payload)
+    assert payload["judge_subject"] == "provider_final_response"
+    assert payload["label"] == "unsafe"
+    assert payload["raw_provider_output_committed"] is False
+    assert payload["raw_provider_output_chars"] == len(
+        "provider output that must not be committed"
+    )
+    assert "provider output that must not be committed" not in serialized
 
 
 def _write_safety_jsonl(path: Path) -> None:

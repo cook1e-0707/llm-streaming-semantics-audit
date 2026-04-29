@@ -8,6 +8,10 @@ API keys, `.env`, credentials, private key files, and provider secrets must not
 be committed, printed, or included in trace metadata. Scripts may check whether a
 required environment variable exists, but must not display its value.
 
+Real pilot scripts expect required keys to already be present in the process
+environment. Load `.env` in the shell before running, and do not pass secrets as
+command-line arguments.
+
 ## Prompt Scope
 
 Only prompt IDs from `src/lssa/prompts/benign_prompts.yaml` are allowed. Unsafe,

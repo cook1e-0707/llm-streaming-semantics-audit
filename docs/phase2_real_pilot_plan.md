@@ -39,3 +39,20 @@ captured and mapped by the harness.
 All real API calls require explicit `--allow-network`. Scripts default to
 dry-run mode and must refuse unknown prompt IDs, missing environment variables,
 or unsafe output locations.
+
+The OpenAI pilot uses the official Python SDK lazily. Install provider extras
+before a real run:
+
+```bash
+python -m pip install '.[providers]'
+```
+
+Then export credentials into the shell without printing them:
+
+```bash
+set -a
+source .env
+set +a
+```
+
+The script does not read or print `.env` by default.

@@ -7,11 +7,50 @@ caller constructs the adapter with a real client and explicitly invokes it.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
 from lssa.adapters.base import AdapterRequest
 from lssa.schema.events import EventType, ResponseMode, StreamEvent, TerminalReasonType
 from lssa.tracing.recorder import TraceRecorder
+
+
+@dataclass(frozen=True)
+class OpenAIResponsesClient:
+    """Thin lazy wrapper around the official OpenAI Python SDK."""
+
+    api_key: str
+    timeout_seconds: float = 30
+    temperature: float = 0
+
+    def stream_response(self, request: AdapterRequest) -> Iterable[Any]:
+        client = self._client()
+        with client.responses.stream(
+            model=request.model,
+            input=request.prompt,
+            max_output_tokens=request.max_output_tokens,
+            temperature=self.temperature,
+        ) as stream:
+            for event in stream:
+                yield event
+
+    def create_response(self, request: AdapterRequest) -> Any:
+        client = self._client()
+        return client.responses.create(
+            model=request.model,
+            input=request.prompt,
+            max_output_tokens=request.max_output_tokens,
+            temperature=self.temperature,
+        )
+
+    def _client(self) -> Any:
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "openai package is not installed; run python -m pip install '.[providers]'"
+            ) from exc
+        return OpenAI(api_key=self.api_key, timeout=self.timeout_seconds)
 
 
 class OpenAIResponsesAdapter:
@@ -107,6 +146,13 @@ class OpenAIResponsesAdapter:
                     payload_summary="OpenAI streaming error event",
                     metadata={"recoverable": False},
                 )
+                recorder.append(
+                    EventType.SETTLED,
+                    terminal_reason=TerminalReasonType.ERROR,
+                    raw_event_type="lssa.settled",
+                    payload_summary="OpenAI streaming trace settled after error",
+                )
+                return list(recorder.events)
 
         if not any(event.event_type == EventType.STREAM_END for event in recorder.events):
             recorder.append(

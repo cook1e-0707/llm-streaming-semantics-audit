@@ -6,13 +6,25 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
 PROJECT_TREE_START = "<!-- PROJECT_TREE_START -->"
 PROJECT_TREE_END = "<!-- PROJECT_TREE_END -->"
+PROJECT_PROGRESS_START = "<!-- PROJECT_PROGRESS_START -->"
+PROJECT_PROGRESS_END = "<!-- PROJECT_PROGRESS_END -->"
 METRICS_REGISTRY_START = "<!-- METRICS_REGISTRY_START -->"
 METRICS_REGISTRY_END = "<!-- METRICS_REGISTRY_END -->"
+
+PROGRESS_STATUSES = {
+    "done",
+    "in_progress",
+    "next",
+    "planned",
+    "blocked",
+    "deferred",
+}
 
 SKIP_DIR_NAMES = {
     ".git",
@@ -39,6 +51,29 @@ class MetricEntry:
     applicable_layers: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class ProgressMilestone:
+    id: str
+    title: str
+    status: str
+
+
+@dataclass(frozen=True)
+class ProgressPhase:
+    id: str
+    title: str
+    status: str
+    summary: str
+    milestones: tuple[ProgressMilestone, ...]
+
+
+@dataclass(frozen=True)
+class ProjectProgress:
+    current_phase: str
+    next_milestone: str
+    phases: tuple[ProgressPhase, ...]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="fail if README is stale")
@@ -62,6 +97,12 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def update_readme_text(text: str, root: Path) -> str:
+    text = replace_section(
+        text,
+        PROJECT_PROGRESS_START,
+        PROJECT_PROGRESS_END,
+        generate_project_progress(root),
+    )
     text = replace_section(
         text,
         PROJECT_TREE_START,
@@ -95,6 +136,33 @@ def generate_project_tree(root: Path) -> str:
     return "```text\n" + "\n".join(lines) + "\n```"
 
 
+def generate_project_progress(root: Path) -> str:
+    progress = load_project_progress(root)
+    lines = [
+        "```text",
+        "Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later",
+        f"Current phase: {progress.current_phase}",
+        f"Next milestone: {progress.next_milestone}",
+        "",
+    ]
+    for phase_index, phase in enumerate(progress.phases):
+        phase_is_last = phase_index == len(progress.phases) - 1
+        phase_connector = "`-- " if phase_is_last else "|-- "
+        lines.append(
+            f"{phase_connector}[{phase.status}] {phase.id} {phase.title}"
+        )
+        milestone_prefix = "    " if phase_is_last else "|   "
+        for milestone_index, milestone in enumerate(phase.milestones):
+            milestone_is_last = milestone_index == len(phase.milestones) - 1
+            milestone_connector = "`-- " if milestone_is_last else "|-- "
+            lines.append(
+                f"{milestone_prefix}{milestone_connector}[{milestone.status}] "
+                f"{milestone.id} {milestone.title}"
+            )
+    lines.append("```")
+    return "\n".join(lines)
+
+
 def generate_metrics_registry(root: Path) -> str:
     entries = load_metrics_registry(root)
     rows = [
@@ -114,6 +182,38 @@ def load_metrics_registry(root: Path) -> list[MetricEntry]:
     if registry_path.exists():
         return parse_metrics_registry_yaml(registry_path)
     return parse_metrics_markdown(root / "docs" / "metrics.md")
+
+
+def load_project_progress(root: Path) -> ProjectProgress:
+    return parse_project_progress_toml(root / "docs" / "project_progress.toml")
+
+
+def parse_project_progress_toml(path: Path) -> ProjectProgress:
+    data = tomllib.loads(path.read_text(encoding="utf-8"))
+    phases = tuple(_phase_from_mapping(item) for item in data.get("phases", []))
+    if not phases:
+        raise ValueError("project progress must define at least one phase")
+    current_phase = str(data.get("current_phase", "")).strip()
+    next_milestone = str(data.get("next_milestone", "")).strip()
+    if not current_phase:
+        raise ValueError("project progress missing current_phase")
+    if not next_milestone:
+        raise ValueError("project progress missing next_milestone")
+    phase_ids = {phase.id for phase in phases}
+    milestone_ids = {
+        milestone.id for phase in phases for milestone in phase.milestones
+    }
+    if current_phase not in phase_ids:
+        raise ValueError(f"current_phase does not match a phase id: {current_phase}")
+    if next_milestone not in milestone_ids:
+        raise ValueError(
+            f"next_milestone does not match a milestone id: {next_milestone}"
+        )
+    return ProjectProgress(
+        current_phase=current_phase,
+        next_milestone=next_milestone,
+        phases=phases,
+    )
 
 
 def parse_metrics_registry_yaml(path: Path) -> list[MetricEntry]:
@@ -202,10 +302,59 @@ def _metric_entry_from_mapping(entry: dict[str, object]) -> MetricEntry:
     )
 
 
+def _phase_from_mapping(entry: dict[str, object]) -> ProgressPhase:
+    required_keys = {"id", "title", "status", "summary", "milestones"}
+    missing = required_keys - set(entry)
+    if missing:
+        raise ValueError(f"Progress phase missing keys: {sorted(missing)}")
+    status = str(entry["status"])
+    _validate_progress_status(status, str(entry["id"]))
+    milestones = tuple(
+        _milestone_from_mapping(item)
+        for item in _as_mapping_list(entry["milestones"])
+    )
+    if not milestones:
+        raise ValueError(f"Progress phase has no milestones: {entry['id']}")
+    return ProgressPhase(
+        id=str(entry["id"]),
+        title=str(entry["title"]),
+        status=status,
+        summary=str(entry["summary"]),
+        milestones=milestones,
+    )
+
+
+def _milestone_from_mapping(entry: dict[str, object]) -> ProgressMilestone:
+    required_keys = {"id", "title", "status"}
+    missing = required_keys - set(entry)
+    if missing:
+        raise ValueError(f"Progress milestone missing keys: {sorted(missing)}")
+    status = str(entry["status"])
+    _validate_progress_status(status, str(entry["id"]))
+    return ProgressMilestone(
+        id=str(entry["id"]),
+        title=str(entry["title"]),
+        status=status,
+    )
+
+
+def _validate_progress_status(status: str, item_id: str) -> None:
+    if status not in PROGRESS_STATUSES:
+        raise ValueError(f"Invalid progress status for {item_id}: {status}")
+
+
 def _as_string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         raise ValueError(f"Expected list value, got {type(value).__name__}")
     return [str(item) for item in value]
+
+
+def _as_mapping_list(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        raise ValueError(f"Expected list value, got {type(value).__name__}")
+    if not all(isinstance(item, dict) for item in value):
+        raise ValueError("Expected list of tables")
+    return value
 
 
 def _extract_bullet_value(text: str, key: str) -> str | None:

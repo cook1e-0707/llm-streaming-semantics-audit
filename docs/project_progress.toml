@@ -1,0 +1,130 @@
+current_phase = "P1"
+next_milestone = "P1.M1"
+
+[status_labels]
+done = "done"
+in_progress = "in_progress"
+next = "next"
+planned = "planned"
+blocked = "blocked"
+deferred = "deferred"
+
+[[phases]]
+id = "P0"
+title = "Research Contract and Measurement Schema"
+status = "done"
+summary = "Define the research contract, semantics taxonomy, trace schema, metrics registry, and baseline validation checks."
+
+[[phases.milestones]]
+id = "P0.M1"
+title = "Repository scaffold"
+status = "done"
+
+[[phases.milestones]]
+id = "P0.M2"
+title = "Semantics taxonomy"
+status = "done"
+
+[[phases.milestones]]
+id = "P0.M3"
+title = "Trace event and metric schema"
+status = "done"
+
+[[phases.milestones]]
+id = "P0.M4"
+title = "README status generation"
+status = "done"
+
+[[phases.milestones]]
+id = "P0.M5"
+title = "Legacy project inventory"
+status = "done"
+
+[[phases]]
+id = "P1"
+title = "Provider Documentation Audit"
+status = "in_progress"
+summary = "Record official documentation evidence and map provider claims onto the shared semantics taxonomy."
+
+[[phases.milestones]]
+id = "P1.M1"
+title = "Source note templates"
+status = "done"
+
+[[phases.milestones]]
+id = "P1.M2"
+title = "Official source evidence collection"
+status = "next"
+
+[[phases.milestones]]
+id = "P1.M3"
+title = "Provider matrix evidence validation"
+status = "in_progress"
+
+[[phases.milestones]]
+id = "P1.M4"
+title = "Open questions and unknown-field review"
+status = "planned"
+
+[[phases]]
+id = "P2"
+title = "Raw API Benign Pilot"
+status = "planned"
+summary = "Validate the harness with benign prompts before introducing safety-sensitive categories."
+
+[[phases.milestones]]
+id = "P2.M1"
+title = "Provider adapter interface"
+status = "planned"
+
+[[phases.milestones]]
+id = "P2.M2"
+title = "Benign streaming trace collection"
+status = "planned"
+
+[[phases.milestones]]
+id = "P2.M3"
+title = "Trace quality checks"
+status = "planned"
+
+[[phases]]
+id = "P3"
+title = "Safety-Signal Pilot"
+status = "deferred"
+summary = "Measure delayed safety signals only after the benign harness and data policy are stable."
+
+[[phases.milestones]]
+id = "P3.M1"
+title = "Redacted prompt policy"
+status = "planned"
+
+[[phases.milestones]]
+id = "P3.M2"
+title = "Safety signal timing traces"
+status = "planned"
+
+[[phases.milestones]]
+id = "P3.M3"
+title = "Exposure-window metrics"
+status = "planned"
+
+[[phases]]
+id = "P4"
+title = "Agent Framework Propagation"
+status = "deferred"
+summary = "Study how frameworks propagate provider semantics after raw provider behavior is measured."
+
+[[phases.milestones]]
+id = "P4.M1"
+title = "Framework instrumentation plan"
+status = "planned"
+
+[[phases.milestones]]
+id = "P4.M2"
+title = "Action-commit boundary traces"
+status = "planned"
+
+[[phases.milestones]]
+id = "P4.M3"
+title = "Provider-vs-framework propagation analysis"
+status = "planned"

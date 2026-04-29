@@ -31,12 +31,50 @@ downstream actions?
 
 ## Current Phase
 
-Phase 0 defines the research contract, shared terminology, trace schema, and
-initial metrics. Provider adapters and external API calls are intentionally out
-of scope for this phase.
+Phase 0 is complete: the repository now has the research contract, shared
+terminology, trace schema, initial metrics, README generation, provider audit
+templates, and legacy inventory.
 
-Next phase: provider documentation audit. Official source notes will be mapped
-to the taxonomy before any provider API measurement is added.
+The current active phase is Phase 1: provider documentation audit. Official
+source notes will be mapped to the taxonomy before any provider API measurement
+is added.
+
+## Project Progress
+
+Progress is tracked in `docs/project_progress.toml` and rendered into this
+README by `python scripts/update_readme_status.py`.
+
+<!-- PROJECT_PROGRESS_START -->
+```text
+Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
+Current phase: P1
+Next milestone: P1.M1
+
+|-- [done] P0 Research Contract and Measurement Schema
+|   |-- [done] P0.M1 Repository scaffold
+|   |-- [done] P0.M2 Semantics taxonomy
+|   |-- [done] P0.M3 Trace event and metric schema
+|   |-- [done] P0.M4 README status generation
+|   `-- [done] P0.M5 Legacy project inventory
+|-- [in_progress] P1 Provider Documentation Audit
+|   |-- [done] P1.M1 Source note templates
+|   |-- [next] P1.M2 Official source evidence collection
+|   |-- [in_progress] P1.M3 Provider matrix evidence validation
+|   `-- [planned] P1.M4 Open questions and unknown-field review
+|-- [planned] P2 Raw API Benign Pilot
+|   |-- [planned] P2.M1 Provider adapter interface
+|   |-- [planned] P2.M2 Benign streaming trace collection
+|   `-- [planned] P2.M3 Trace quality checks
+|-- [deferred] P3 Safety-Signal Pilot
+|   |-- [planned] P3.M1 Redacted prompt policy
+|   |-- [planned] P3.M2 Safety signal timing traces
+|   `-- [planned] P3.M3 Exposure-window metrics
+`-- [deferred] P4 Agent Framework Propagation
+    |-- [planned] P4.M1 Framework instrumentation plan
+    |-- [planned] P4.M2 Action-commit boundary traces
+    `-- [planned] P4.M3 Provider-vs-framework propagation analysis
+```
+<!-- PROJECT_PROGRESS_END -->
 
 ## Scope
 
@@ -61,6 +99,7 @@ Out of scope for the initial phase:
 - Semantics taxonomy: `docs/semantics_taxonomy.md`
 - Metrics definitions: `docs/metrics.md`
 - Machine-readable metrics registry: `docs/metrics_registry.yaml`
+- Machine-readable project progress: `docs/project_progress.toml`
 - Provider documentation matrix: `docs/provider_matrix.md`
 - Experiment scope: `docs/experiment_scope.md`
 - Legacy project notes: `docs/legacy_project_notes.md`
@@ -82,6 +121,7 @@ llm-streaming-semantics-audit/
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
 |   |-- metrics_registry.yaml
+|   |-- project_progress.toml
 |   |-- provider_matrix.md
 |   |-- research_charter.md
 |   `-- semantics_taxonomy.md

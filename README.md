@@ -170,6 +170,7 @@ llm-streaming-semantics-audit/
 |   |-- legacy_project_notes.md
 |   |-- metrics.md
 |   |-- metrics_registry.yaml
+|   |-- p3_overnight_batch.md
 |   |-- phase1_quality_gate.md
 |   |-- phase1_unknown_fields_review.md
 |   |-- phase2_plan.md
@@ -206,6 +207,7 @@ llm-streaming-semantics-audit/
 |   |-- run_judge_adjudication.py
 |   |-- run_mock_pilot.py
 |   |-- run_mock_safety_pilot.py
+|   |-- run_p3_overnight_batch.py
 |   |-- run_real_benign_pilot.py
 |   |-- run_safety_signal_pilot.py
 |   |-- summarize_real_pilot.py
@@ -256,6 +258,7 @@ llm-streaming-semantics-audit/
 |   |-- test_mock_provider.py
 |   |-- test_mock_safety_pilot.py
 |   |-- test_nvidia_judge.py
+|   |-- test_p3_overnight_batch.py
 |   |-- test_phase1_quality_gate.py
 |   |-- test_phase2_pilot_ready.py
 |   |-- test_phase3_quality_gate.py

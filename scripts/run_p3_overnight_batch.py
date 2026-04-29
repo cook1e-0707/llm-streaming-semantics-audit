@@ -293,6 +293,8 @@ def _write_summary(run_root: Path) -> Path:
         "safety_trace_count": 0,
         "judge_result_count": 0,
         "response_judge_result_count": 0,
+        "trace_terminal_reasons": {},
+        "event_terminal_reason_counts": {},
         "terminal_reasons": {},
         "provider_stop_reasons": {},
         "event_type_counts": {},
@@ -301,7 +303,8 @@ def _write_summary(run_root: Path) -> Path:
         "judge_labels": {},
         "response_judge_labels": {},
     }
-    terminal_reasons: Counter[str] = Counter()
+    trace_terminal_reasons: Counter[str] = Counter()
+    event_terminal_reason_counts: Counter[str] = Counter()
     provider_stop_reasons: Counter[str] = Counter()
     event_type_counts: Counter[str] = Counter()
     safety_signal_event_types: Counter[str] = Counter()
@@ -314,11 +317,14 @@ def _write_summary(run_root: Path) -> Path:
         except (OSError, json.JSONDecodeError):
             continue
         summary["safety_trace_count"] += 1
-        terminal_reasons[str(payload.get("terminal_reason") or "unknown")] += 1
+        trace_terminal_reasons[str(payload.get("terminal_reason") or "unknown")] += 1
         for event in payload.get("events", []):
             if not isinstance(event, dict):
                 continue
             event_type_counts[str(event.get("event_type") or "unknown")] += 1
+            terminal_reason = event.get("terminal_reason")
+            if terminal_reason is not None:
+                event_terminal_reason_counts[str(terminal_reason)] += 1
             event_type = str(event.get("event_type") or "unknown")
             if event_type in {"safety_annotation", "refusal", "content_filter"}:
                 safety_signal_event_types[event_type] += 1
@@ -343,7 +349,9 @@ def _write_summary(run_root: Path) -> Path:
         summary["response_judge_result_count"] += 1
         response_judge_labels[str(payload.get("label") or "unknown")] += 1
 
-    summary["terminal_reasons"] = dict(sorted(terminal_reasons.items()))
+    summary["trace_terminal_reasons"] = dict(sorted(trace_terminal_reasons.items()))
+    summary["event_terminal_reason_counts"] = dict(sorted(event_terminal_reason_counts.items()))
+    summary["terminal_reasons"] = dict(sorted(trace_terminal_reasons.items()))
     summary["provider_stop_reasons"] = dict(sorted(provider_stop_reasons.items()))
     summary["event_type_counts"] = dict(sorted(event_type_counts.items()))
     summary["safety_signal_event_count"] = sum(safety_signal_event_types.values())

@@ -54,7 +54,7 @@ README by `python scripts/update_readme_status.py`.
 ```text
 Legend: [done] complete, [in_progress] active, [next] immediate next, [planned] queued, [deferred] later
 Current phase: P3
-Next milestone: P3.M2
+Next milestone: P3.M3
 
 |-- [done] P0 Research Contract and Measurement Schema
 |   |-- [done] P0.M1 Repository scaffold
@@ -79,9 +79,10 @@ Next milestone: P3.M2
 |   |-- [done] P3.M1 Redacted prompt policy
 |   |-- [done] P3.M2a Mock safety-signal harness
 |   |-- [done] P3.M2b External safety prompt source
-|   |-- [next] P3.M2 Safety signal timing traces
-|   |-- [planned] P3.M3 Exposure-window metrics
-|   `-- [done] P3.M4 LLM-as-a-judge dual NVIDIA adjudication
+|   |-- [done] P3.M2 Safety signal timing traces
+|   |-- [next] P3.M3 Exposure-window metrics
+|   |-- [done] P3.M4 LLM-as-a-judge dual NVIDIA adjudication
+|   `-- [done] P3.M5 Paired provider/mode analysis
 `-- [deferred] P4 Agent Framework Propagation
     |-- [planned] P4.M1 Framework instrumentation plan
     |-- [planned] P4.M2 Action-commit boundary traces
@@ -152,7 +153,8 @@ llm-streaming-semantics-audit/
 |   |   |-- anthropic_messages_benign_pilot.md
 |   |   |-- aws_bedrock_converse_benign_pilot.md
 |   |   |-- benign_lifecycle_comparison.md
-|   |   `-- openai_responses_benign_pilot.md
+|   |   |-- openai_responses_benign_pilot.md
+|   |   `-- p3_stratified_safety_analysis.md
 |   |-- source_notes/
 |   |   |-- anthropic.md
 |   |   |-- aws_bedrock.md
@@ -192,6 +194,7 @@ llm-streaming-semantics-audit/
 |   |-- stop_reason_probe_plan.md
 |   `-- trace_contract.md
 |-- scripts/
+|   |-- analyze_p3_paired.py
 |   |-- audit_p3_results.py
 |   |-- check_judge_ready.py
 |   |-- check_p3_mock_safety_ready.py
@@ -262,6 +265,7 @@ llm-streaming-semantics-audit/
 |   |-- test_mock_safety_pilot.py
 |   |-- test_nvidia_judge.py
 |   |-- test_p3_overnight_batch.py
+|   |-- test_p3_paired_analysis.py
 |   |-- test_p3_result_audit.py
 |   |-- test_p3_run_summary.py
 |   |-- test_phase1_quality_gate.py

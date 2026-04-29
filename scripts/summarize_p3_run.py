@@ -69,7 +69,8 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
     response_judge_paths = sorted((run_root / "response_judge").rglob("*.json"))
     by_provider_mode: Counter[str] = Counter()
     event_type_counts: Counter[str] = Counter()
-    terminal_reasons: Counter[str] = Counter()
+    trace_terminal_reasons: Counter[str] = Counter()
+    event_terminal_reason_counts: Counter[str] = Counter()
     provider_stop_reasons: Counter[str] = Counter()
     safety_signal_types: Counter[str] = Counter()
     safety_signal_event_types: Counter[str] = Counter()
@@ -93,11 +94,12 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
             nonstreaming_trace_count += 1
         provider = _provider_for_path(path)
         by_provider_mode[f"{provider}:{response_mode.value}"] += 1
+        trace_terminal_reasons[_trace_terminal_reason(events)] += 1
 
         for event in events:
             event_type_counts[event.event_type.value] += 1
             if event.terminal_reason is not None:
-                terminal_reasons[event.terminal_reason.value] += 1
+                event_terminal_reason_counts[event.terminal_reason.value] += 1
             if event.safety_signal is not None:
                 safety_signal_types[event.safety_signal.signal_type.value] += 1
             if event.event_type in {
@@ -162,7 +164,9 @@ def summarize_run(run_root: Path) -> dict[str, Any]:
         "response_judge_result_count": len(response_judge_paths),
         "by_provider_mode": dict(sorted(by_provider_mode.items())),
         "event_type_counts": dict(sorted(event_type_counts.items())),
-        "terminal_reasons": dict(sorted(terminal_reasons.items())),
+        "trace_terminal_reasons": dict(sorted(trace_terminal_reasons.items())),
+        "event_terminal_reason_counts": dict(sorted(event_terminal_reason_counts.items())),
+        "terminal_reasons": dict(sorted(trace_terminal_reasons.items())),
         "provider_stop_reasons": dict(sorted(provider_stop_reasons.items())),
         "safety_signal_event_count": sum(safety_signal_event_types.values()),
         "safety_signal_event_types": dict(sorted(safety_signal_event_types.items())),
@@ -218,6 +222,13 @@ def _provider_for_path(path: Path) -> str:
     if index + 1 >= len(parts):
         return "unknown"
     return parts[index + 1]
+
+
+def _trace_terminal_reason(events: list[StreamEvent]) -> str:
+    for event in reversed(events):
+        if event.terminal_reason is not None:
+            return event.terminal_reason.value
+    return "unknown"
 
 
 def _first_event(events: list[StreamEvent], event_type: EventType) -> StreamEvent | None:

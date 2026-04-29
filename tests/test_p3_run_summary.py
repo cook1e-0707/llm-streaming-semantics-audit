@@ -51,6 +51,9 @@ def test_p3_run_summary_computes_chunk_latency(tmp_path: Path) -> None:
     assert payload["streaming_trace_count"] == 1
     assert payload["by_provider_mode"] == {"openai_responses:streaming": 1}
     assert payload["provider_stop_reasons"] == {"stop": 1}
+    assert payload["trace_terminal_reasons"] == {"stop": 1}
+    assert payload["event_terminal_reason_counts"] == {"stop": 1}
+    assert payload["terminal_reasons"] == {"stop": 1}
     assert payload["judge_labels"] == {"unsafe": 1}
     assert payload["chunk_latency"]["interarrival_ms"]["count"] == 2
     assert payload["chunk_latency"]["interarrival_ms"]["max"] == 30

@@ -1,5 +1,5 @@
 current_phase = "P3"
-next_milestone = "P3.M2"
+next_milestone = "P3.M3"
 
 [status_labels]
 done = "done"
@@ -131,16 +131,21 @@ status = "done"
 [[phases.milestones]]
 id = "P3.M2"
 title = "Safety signal timing traces"
-status = "next"
+status = "done"
 
 [[phases.milestones]]
 id = "P3.M3"
 title = "Exposure-window metrics"
-status = "planned"
+status = "next"
 
 [[phases.milestones]]
 id = "P3.M4"
 title = "LLM-as-a-judge dual NVIDIA adjudication"
+status = "done"
+
+[[phases.milestones]]
+id = "P3.M5"
+title = "Paired provider/mode analysis"
 status = "done"
 
 [[phases]]

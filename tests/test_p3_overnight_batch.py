@@ -91,7 +91,9 @@ def test_p3_overnight_summary_counts_redacted_outputs(tmp_path: Path) -> None:
     assert payload["raw_text_committed"] is False
     assert payload["safety_trace_count"] == 1
     assert payload["judge_result_count"] == 1
+    assert payload["trace_terminal_reasons"] == {"completed": 1}
     assert payload["terminal_reasons"] == {"completed": 1}
+    assert payload["event_terminal_reason_counts"] == {}
     assert payload["provider_stop_reasons"] == {"stop": 1}
     assert payload["judge_labels"] == {"unsafe": 1}
 

@@ -21,18 +21,18 @@ exposure windows.
 
 ## Latest Trace Summary
 
-| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason | Provider stop reason |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| `benign_summary` | `streaming` | `gpt-4.1-mini` | yes | 24 | 16 | 98 | 836.762 | 2497.404 | 0.008 | `complete` | `unknown` |
-| `benign_summary` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 98 | 1165.356 | n/a | 0.006 | `complete` | `unknown` |
-| `long_text_generation` | `streaming` | `gpt-4.1-mini` | yes | 109 | 101 | 608 | 951.109 | 2140.552 | 0.012 | `complete` | `unknown` |
-| `long_text_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 608 | 2844.857 | n/a | 0.005 | `complete` | `unknown` |
-| `numbered_list_generation` | `streaming` | `gpt-4.1-mini` | yes | 136 | 128 | 729 | 840.616 | 1018.920 | 0.022 | `complete` | `unknown` |
-| `numbered_list_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 707 | 3848.149 | n/a | 0.005 | `complete` | `unknown` |
-| `short_text_generation` | `streaming` | `gpt-4.1-mini` | yes | 17 | 9 | 58 | 2324.892 | 3418.280 | 0.008 | `complete` | `unknown` |
-| `short_text_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 58 | 1524.352 | n/a | 0.005 | `complete` | `unknown` |
-| `structured_json_generation` | `streaming` | `gpt-4.1-mini` | yes | 50 | 42 | 165 | 1668.958 | 4359.041 | 0.007 | `complete` | `unknown` |
-| `structured_json_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 165 | 2995.970 | n/a | 0.005 | `complete` | `unknown` |
+| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | Output tokens | Total tokens | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason | Provider stop reason |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `benign_summary` | `streaming` | `gpt-4.1-mini` | yes | 24 | 16 | 98 | n/a | n/a | 836.762 | 2497.404 | 0.008 | `complete` | `unknown` |
+| `benign_summary` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 98 | n/a | n/a | 1165.356 | n/a | 0.006 | `complete` | `unknown` |
+| `long_text_generation` | `streaming` | `gpt-4.1-mini` | yes | 109 | 101 | 608 | n/a | n/a | 951.109 | 2140.552 | 0.012 | `complete` | `unknown` |
+| `long_text_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 608 | n/a | n/a | 2844.857 | n/a | 0.005 | `complete` | `unknown` |
+| `numbered_list_generation` | `streaming` | `gpt-4.1-mini` | yes | 136 | 128 | 729 | n/a | n/a | 840.616 | 1018.920 | 0.022 | `complete` | `unknown` |
+| `numbered_list_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 707 | n/a | n/a | 3848.149 | n/a | 0.005 | `complete` | `unknown` |
+| `short_text_generation` | `streaming` | `gpt-4.1-mini` | yes | 17 | 9 | 58 | n/a | n/a | 2324.892 | 3418.280 | 0.008 | `complete` | `unknown` |
+| `short_text_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 58 | n/a | n/a | 1524.352 | n/a | 0.005 | `complete` | `unknown` |
+| `structured_json_generation` | `streaming` | `gpt-4.1-mini` | yes | 50 | 42 | 165 | n/a | n/a | 1668.958 | 4359.041 | 0.007 | `complete` | `unknown` |
+| `structured_json_generation` | `nonstreaming` | `gpt-4.1-mini` | yes | 6 | 0 | 165 | n/a | n/a | 2995.970 | n/a | 0.005 | `complete` | `unknown` |
 
 ## Notes
 
@@ -40,6 +40,8 @@ exposure windows.
 - `TTFT_ms` is only defined for streaming traces that emit `first_token`.
 - `Final chars` uses normalized character counts and does not require
   retaining model text.
+- `Output tokens` and `Total tokens` use provider-reported usage when
+  exposed by the adapter; they are not inferred from redacted text.
 - `Provider stop reason` is copied from provider metadata when exposed by
   the adapter; otherwise it is reported as `unknown`.
 - Artifacts remain under ignored local directories and are not committed.

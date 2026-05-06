@@ -20,6 +20,17 @@ from lssa.adapters.anthropic_messages import AnthropicMessagesAdapter, Anthropic
 from lssa.adapters.aws_bedrock_converse import AwsBedrockConverseAdapter, AwsBedrockConverseClient
 from lssa.adapters.base import AdapterRequest
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
+from lssa.adapters.xiaomi_mimo import (
+    DEFAULT_XIAOMI_MIMO_MODEL,
+    XiaomiMimoAnthropicAdapter,
+    XiaomiMimoAnthropicClient,
+    XiaomiMimoOpenAIAdapter,
+    XiaomiMimoOpenAIClient,
+    xiaomi_mimo_anthropic_base_url,
+    xiaomi_mimo_api_key_from_env,
+    xiaomi_mimo_model,
+    xiaomi_mimo_openai_base_url,
+)
 from lssa.judging.nvidia import (
     NVIDIA_JUDGE_PROVIDER,
     SUPPORTED_NVIDIA_JUDGE_PROFILES,
@@ -46,11 +57,15 @@ SUPPORTED_PROVIDERS = {
     "anthropic_messages",
     "aws_bedrock_converse",
     "openai_responses",
+    "xiaomi_mimo_anthropic",
+    "xiaomi_mimo_openai",
 }
 DEFAULT_MODELS = {
     "anthropic_messages": "claude-haiku-4-5-20251001",
     "aws_bedrock_converse": "amazon.nova-micro-v1:0",
     "openai_responses": "gpt-4.1-mini",
+    "xiaomi_mimo_anthropic": DEFAULT_XIAOMI_MIMO_MODEL,
+    "xiaomi_mimo_openai": DEFAULT_XIAOMI_MIMO_MODEL,
 }
 MAX_CALLS_WITHOUT_FORCE = 3
 
@@ -329,6 +344,30 @@ def _adapter_for_provider(args: argparse.Namespace):
                 temperature=args.temperature,
             )
         )
+    if args.provider == "xiaomi_mimo_openai":
+        api_key, api_key_env = xiaomi_mimo_api_key_from_env()
+        if not api_key:
+            raise RuntimeError(f"{api_key_env} is required but was not printed")
+        return XiaomiMimoOpenAIAdapter(
+            client=XiaomiMimoOpenAIClient(
+                api_key=api_key,
+                base_url=xiaomi_mimo_openai_base_url(),
+                timeout_seconds=args.timeout_seconds,
+                temperature=args.temperature,
+            )
+        )
+    if args.provider == "xiaomi_mimo_anthropic":
+        api_key, api_key_env = xiaomi_mimo_api_key_from_env()
+        if not api_key:
+            raise RuntimeError(f"{api_key_env} is required but was not printed")
+        return XiaomiMimoAnthropicAdapter(
+            client=XiaomiMimoAnthropicClient(
+                api_key=api_key,
+                base_url=xiaomi_mimo_anthropic_base_url(),
+                timeout_seconds=args.timeout_seconds,
+                temperature=args.temperature,
+            )
+        )
     raise RuntimeError(f"unsupported provider: {args.provider}")
 
 
@@ -361,6 +400,8 @@ def _pilot_status(events: list[StreamEvent], validation_ok: bool) -> str:
 
 
 def _model_for_provider(args: argparse.Namespace) -> str:
+    if args.provider in {"xiaomi_mimo_anthropic", "xiaomi_mimo_openai"} and args.model is None:
+        return xiaomi_mimo_model()
     return args.model or DEFAULT_MODELS[args.provider]
 
 

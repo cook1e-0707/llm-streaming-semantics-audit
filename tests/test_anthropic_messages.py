@@ -125,6 +125,7 @@ def test_anthropic_streaming_mapping_from_fake_events() -> None:
             {
                 "type": "message_delta",
                 "delta": {"stop_reason": "end_turn"},
+                "usage": {"output_tokens": 2},
             },
             {"type": "message_stop"},
         ],
@@ -137,6 +138,9 @@ def test_anthropic_streaming_mapping_from_fake_events() -> None:
         event.metadata.get("raw_event_type") == "content_block_delta"
         for event in events
     )
+    final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
+    assert final_response.token_count == 2
+    assert final_response.metadata["provider_output_tokens"] == 2
 
 
 def test_anthropic_streaming_error_mapping_is_terminal() -> None:
@@ -205,6 +209,7 @@ def test_anthropic_nonstreaming_mapping_from_fake_response() -> None:
         {
             "content": [{"type": "text", "text": "A careful trace records events."}],
             "stop_reason": "end_turn",
+            "usage": {"input_tokens": 9, "output_tokens": 6},
         },
     )
 
@@ -218,6 +223,10 @@ def test_anthropic_nonstreaming_mapping_from_fake_response() -> None:
         EventType.SETTLED,
     ]
     assert events[-1].terminal_reason == TerminalReasonType.COMPLETE
+    final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
+    assert final_response.token_count == 6
+    assert final_response.metadata["provider_input_tokens"] == 9
+    assert final_response.metadata["provider_total_tokens"] == 15
 
 
 def test_anthropic_stop_sequence_maps_to_stop_terminal_reason() -> None:

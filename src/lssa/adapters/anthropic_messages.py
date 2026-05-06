@@ -12,6 +12,11 @@ from typing import Any
 
 from lssa.adapters.base import AdapterRequest
 from lssa.adapters.safety_mapping import append_provider_safety_signal
+from lssa.adapters.token_usage import (
+    merge_token_usage,
+    output_token_count,
+    token_usage_metadata,
+)
 from lssa.schema.events import EventType, ResponseMode, StreamEvent, TerminalReasonType
 from lssa.tracing.recorder import TraceRecorder
 
@@ -104,6 +109,7 @@ class AnthropicMessagesAdapter:
 
         content = _response_text(raw_response)
         provider_stop_reason = _stop_reason(raw_response)
+        usage_metadata = _usage_metadata(raw_response, source="anthropic_messages.usage")
         recorder.append(
             EventType.FIRST_BYTE,
             raw_event_type="message.completed",
@@ -119,10 +125,11 @@ class AnthropicMessagesAdapter:
         recorder.append(
             EventType.FINAL_RESPONSE,
             content=content,
+            token_count=output_token_count(usage_metadata),
             char_count=len(content) if content else None,
             raw_event_type="message.completed",
             payload_summary="complete non-streaming response",
-            metadata={"provider_stop_reason": provider_stop_reason},
+            metadata={"provider_stop_reason": provider_stop_reason, **usage_metadata},
         )
         recorder.append(
             EventType.ITERATOR_END,
@@ -158,9 +165,14 @@ class AnthropicMessagesAdapter:
         saw_first_byte = False
         saw_first_token = False
         provider_stop_reason = "unknown"
+        usage_metadata: dict[str, int | str] = {}
         chunks: list[str] = []
         for raw_event in raw_events:
             raw_type = _raw_event_type(raw_event)
+            usage_metadata = merge_token_usage(
+                usage_metadata,
+                _usage_metadata(raw_event, source=f"anthropic_messages.{raw_type}.usage"),
+            )
             if not saw_first_byte:
                 recorder.append(
                     EventType.FIRST_BYTE,
@@ -211,10 +223,14 @@ class AnthropicMessagesAdapter:
                 recorder.append(
                     EventType.FINAL_RESPONSE,
                     content=content or None,
+                    token_count=output_token_count(usage_metadata),
                     char_count=len(content) if content else None,
                     raw_event_type=raw_type,
                     payload_summary="assembled final streaming response",
-                    metadata={"provider_stop_reason": provider_stop_reason},
+                    metadata={
+                        "provider_stop_reason": provider_stop_reason,
+                        **usage_metadata,
+                    },
                 )
                 continue
 
@@ -245,10 +261,11 @@ class AnthropicMessagesAdapter:
             recorder.append(
                 EventType.FINAL_RESPONSE,
                 content=content or None,
+                token_count=output_token_count(usage_metadata),
                 char_count=len(content) if content else None,
                 raw_event_type="lssa.synthetic_final_response",
                 payload_summary="assembled final response from text deltas",
-                metadata={"provider_stop_reason": provider_stop_reason},
+                metadata={"provider_stop_reason": provider_stop_reason, **usage_metadata},
             )
         recorder.append(
             EventType.ITERATOR_END,
@@ -287,6 +304,7 @@ class AnthropicMessagesAdapter:
         )
         content = _response_text(raw_response)
         provider_stop_reason = _stop_reason(raw_response)
+        usage_metadata = _usage_metadata(raw_response, source="anthropic_messages.usage")
         append_provider_safety_signal(
             recorder,
             provider_stop_reason,
@@ -297,10 +315,11 @@ class AnthropicMessagesAdapter:
         recorder.append(
             EventType.FINAL_RESPONSE,
             content=content,
+            token_count=output_token_count(usage_metadata),
             char_count=len(content) if content else None,
             raw_event_type="message.completed",
             payload_summary="complete non-streaming response",
-            metadata={"provider_stop_reason": provider_stop_reason},
+            metadata={"provider_stop_reason": provider_stop_reason, **usage_metadata},
         )
         recorder.append(
             EventType.ITERATOR_END,
@@ -372,6 +391,17 @@ def _response_text(raw_response: Any) -> str:
 def _stop_reason(raw_response: Any) -> str:
     stop_reason = _field(raw_response, "stop_reason")
     return stop_reason if isinstance(stop_reason, str) else "unknown"
+
+
+def _usage_metadata(raw_response_or_event: Any, *, source: str) -> dict[str, int | str]:
+    message = _field(raw_response_or_event, "message")
+    usage = _field(raw_response_or_event, "usage") or _field(message, "usage")
+    return token_usage_metadata(
+        input_tokens=_field(usage, "input_tokens"),
+        output_tokens=_field(usage, "output_tokens"),
+        total_tokens=None,
+        source=source,
+    )
 
 
 def _terminal_reason_from_provider_stop(provider_stop_reason: str) -> TerminalReasonType:

@@ -119,7 +119,17 @@ def test_openai_streaming_mapping_from_fake_events() -> None:
             {"type": "response.created"},
             {"type": "response.output_text.delta", "delta": "Hello"},
             {"type": "response.output_text.delta", "delta": " world"},
-            {"type": "response.completed", "response": {"status": "completed"}},
+            {
+                "type": "response.completed",
+                "response": {
+                    "status": "completed",
+                    "usage": {
+                        "input_tokens": 7,
+                        "output_tokens": 2,
+                        "total_tokens": 9,
+                    },
+                },
+            },
         ],
     )
 
@@ -131,6 +141,10 @@ def test_openai_streaming_mapping_from_fake_events() -> None:
     )
     final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
     assert final_response.metadata["provider_stop_reason"] == "completed"
+    assert final_response.token_count == 2
+    assert final_response.metadata["provider_input_tokens"] == 7
+    assert final_response.metadata["provider_output_tokens"] == 2
+    assert final_response.metadata["provider_total_tokens"] == 9
 
 
 def test_openai_streaming_error_mapping_is_terminal() -> None:
@@ -196,7 +210,11 @@ def test_openai_nonstreaming_mapping_from_fake_response() -> None:
 
     events = adapter.map_nonstreaming_response(
         request,
-        {"output_text": "A careful trace records events in order.", "status": "completed"},
+        {
+            "output_text": "A careful trace records events in order.",
+            "status": "completed",
+            "usage": {"input_tokens": 8, "output_tokens": 7, "total_tokens": 15},
+        },
     )
 
     assert validate_trace(events).ok
@@ -209,6 +227,9 @@ def test_openai_nonstreaming_mapping_from_fake_response() -> None:
         EventType.SETTLED,
     ]
     assert events[-1].terminal_reason == TerminalReasonType.COMPLETE
+    final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
+    assert final_response.token_count == 7
+    assert final_response.metadata["provider_total_tokens"] == 15
 
 
 def test_openai_max_output_tokens_maps_to_length_terminal_reason() -> None:

@@ -36,6 +36,7 @@ def test_collect_latest_trace_rows_uses_latest_started_trace(tmp_path: Path) -> 
     assert len(rows) == 1
     assert rows[0].trace_id == "newer"
     assert rows[0].ttfb_ms == 25
+    assert rows[0].provider_output_tokens == 5
 
 
 def test_render_markdown_excludes_model_content(tmp_path: Path) -> None:
@@ -55,6 +56,7 @@ def test_render_markdown_excludes_model_content(tmp_path: Path) -> None:
     assert "model output text" not in markdown
     assert "Content fields redacted: `yes`" in markdown
     assert "Provider stop reason" in markdown
+    assert "Output tokens" in markdown
     assert "`short_text_generation`" in markdown
 
 
@@ -194,7 +196,13 @@ def _write_trace(
         wall_time_iso=started_at,
         content="model output text",
         char_count=17,
-        metadata={"provider_stop_reason": "completed"},
+        token_count=5,
+        metadata={
+            "provider_stop_reason": "completed",
+            "provider_input_tokens": 3,
+            "provider_output_tokens": 5,
+            "provider_total_tokens": 8,
+        },
     )
     recorder.append(
         EventType.ITERATOR_END,

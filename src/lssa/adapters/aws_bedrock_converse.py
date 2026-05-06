@@ -12,6 +12,11 @@ from typing import Any
 
 from lssa.adapters.base import AdapterRequest
 from lssa.adapters.safety_mapping import append_provider_safety_signal
+from lssa.adapters.token_usage import (
+    merge_token_usage,
+    output_token_count,
+    token_usage_metadata,
+)
 from lssa.schema.events import EventType, ResponseMode, StreamEvent, TerminalReasonType
 from lssa.tracing.recorder import TraceRecorder
 from lssa.utils.aws_bedrock import BedrockRuntimeSdkConfig
@@ -104,6 +109,7 @@ class AwsBedrockConverseAdapter:
 
         content = _response_text(raw_response)
         provider_stop_reason = _stop_reason(raw_response)
+        usage_metadata = _usage_metadata(raw_response, source="aws_bedrock_converse.usage")
         recorder.append(
             EventType.FIRST_BYTE,
             raw_event_type="converse.completed",
@@ -119,10 +125,11 @@ class AwsBedrockConverseAdapter:
         recorder.append(
             EventType.FINAL_RESPONSE,
             content=content,
+            token_count=output_token_count(usage_metadata),
             char_count=len(content) if content else None,
             raw_event_type="converse.completed",
             payload_summary="complete non-streaming response",
-            metadata={"provider_stop_reason": provider_stop_reason},
+            metadata={"provider_stop_reason": provider_stop_reason, **usage_metadata},
         )
         recorder.append(
             EventType.ITERATOR_END,
@@ -157,10 +164,16 @@ class AwsBedrockConverseAdapter:
 
         saw_first_byte = False
         saw_first_token = False
+        saw_message_stop = False
         provider_stop_reason = "unknown"
+        usage_metadata: dict[str, int | str] = {}
         chunks: list[str] = []
         for raw_event in raw_events:
             raw_type = _raw_event_type(raw_event)
+            usage_metadata = merge_token_usage(
+                usage_metadata,
+                _usage_metadata(raw_event, source=f"aws_bedrock_converse.{raw_type}.usage"),
+            )
             if not saw_first_byte:
                 recorder.append(
                     EventType.FIRST_BYTE,
@@ -191,8 +204,8 @@ class AwsBedrockConverseAdapter:
                 continue
 
             if raw_type == "messageStop":
+                saw_message_stop = True
                 provider_stop_reason = _message_stop_reason(raw_event)
-                content = "".join(chunks)
                 recorder.append(
                     EventType.STREAM_END,
                     raw_event_type=raw_type,
@@ -204,14 +217,6 @@ class AwsBedrockConverseAdapter:
                     terminal_reason=_terminal_reason_from_provider_stop(provider_stop_reason),
                     raw_event_type=raw_type,
                     payload_summary="AWS Bedrock streaming provider safety terminal signal",
-                )
-                recorder.append(
-                    EventType.FINAL_RESPONSE,
-                    content=content or None,
-                    char_count=len(content) if content else None,
-                    raw_event_type=raw_type,
-                    payload_summary="assembled final streaming response",
-                    metadata={"provider_stop_reason": provider_stop_reason},
                 )
                 continue
 
@@ -242,10 +247,11 @@ class AwsBedrockConverseAdapter:
             recorder.append(
                 EventType.FINAL_RESPONSE,
                 content=content or None,
+                token_count=output_token_count(usage_metadata),
                 char_count=len(content) if content else None,
-                raw_event_type="lssa.synthetic_final_response",
+                raw_event_type="messageStop" if saw_message_stop else "lssa.synthetic_final_response",
                 payload_summary="assembled final response from text deltas",
-                metadata={"provider_stop_reason": provider_stop_reason},
+                metadata={"provider_stop_reason": provider_stop_reason, **usage_metadata},
             )
         recorder.append(
             EventType.ITERATOR_END,
@@ -284,6 +290,7 @@ class AwsBedrockConverseAdapter:
         )
         content = _response_text(raw_response)
         provider_stop_reason = _stop_reason(raw_response)
+        usage_metadata = _usage_metadata(raw_response, source="aws_bedrock_converse.usage")
         append_provider_safety_signal(
             recorder,
             provider_stop_reason,
@@ -294,10 +301,11 @@ class AwsBedrockConverseAdapter:
         recorder.append(
             EventType.FINAL_RESPONSE,
             content=content,
+            token_count=output_token_count(usage_metadata),
             char_count=len(content) if content else None,
             raw_event_type="converse.completed",
             payload_summary="complete non-streaming response",
-            metadata={"provider_stop_reason": provider_stop_reason},
+            metadata={"provider_stop_reason": provider_stop_reason, **usage_metadata},
         )
         recorder.append(
             EventType.ITERATOR_END,
@@ -376,6 +384,17 @@ def _response_text(raw_response: Any) -> str:
 def _stop_reason(raw_response: Any) -> str:
     stop_reason = _field(raw_response, "stopReason")
     return stop_reason if isinstance(stop_reason, str) else "unknown"
+
+
+def _usage_metadata(raw_response_or_event: Any, *, source: str) -> dict[str, int | str]:
+    metadata = _field(raw_response_or_event, "metadata")
+    usage = _field(raw_response_or_event, "usage") or _field(metadata, "usage")
+    return token_usage_metadata(
+        input_tokens=_field(usage, "inputTokens") or _field(usage, "input_tokens"),
+        output_tokens=_field(usage, "outputTokens") or _field(usage, "output_tokens"),
+        total_tokens=_field(usage, "totalTokens") or _field(usage, "total_tokens"),
+        source=source,
+    )
 
 
 def _terminal_reason_from_provider_stop(provider_stop_reason: str) -> TerminalReasonType:

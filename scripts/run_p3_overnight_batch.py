@@ -26,7 +26,13 @@ except ImportError:
     from check_judge_ready import check_judge_ready
     from check_p3_safety_pilot_ready import check_p3_safety_pilot_ready
 
-SUPPORTED_PROVIDERS = ("openai_responses", "anthropic_messages", "aws_bedrock_converse")
+SUPPORTED_PROVIDERS = (
+    "openai_responses",
+    "anthropic_messages",
+    "aws_bedrock_converse",
+    "xiaomi_mimo_openai",
+    "xiaomi_mimo_anthropic",
+)
 SUPPORTED_MODES = ("streaming", "nonstreaming")
 SUPPORTED_JUDGE_PROFILES = ("a", "b", "all")
 DEFAULT_OUTPUT_ROOT = Path("artifacts/p3_overnight")

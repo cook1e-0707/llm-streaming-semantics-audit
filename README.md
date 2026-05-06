@@ -125,9 +125,12 @@ Out of scope for the initial phase:
 - Stop reason probe plan: `docs/stop_reason_probe_plan.md`
 - Stop reason probe manifest example: `docs/stop_reason_probe_manifest.example.toml`
 - AWS Bedrock SDK configuration: `docs/bedrock_sdk_config.md`
+- Xiaomi MiMo SDK configuration: `docs/xiaomi_mimo_sdk_config.md`
 - OpenAI benign pilot summary: `docs/pilot_runs/openai_responses_benign_pilot.md`
 - Anthropic benign pilot summary: `docs/pilot_runs/anthropic_messages_benign_pilot.md`
 - AWS Bedrock benign pilot summary: `docs/pilot_runs/aws_bedrock_converse_benign_pilot.md`
+- Xiaomi MiMo OpenAI-compatible benign pilot summary: `docs/pilot_runs/xiaomi_mimo_openai_benign_pilot.md`
+- Xiaomi MiMo Anthropic-compatible benign pilot summary: `docs/pilot_runs/xiaomi_mimo_anthropic_benign_pilot.md`
 - Benign lifecycle comparison: `docs/pilot_runs/benign_lifecycle_comparison.md`
 - Phase 3 plan: `docs/phase3_plan.md`
 - Phase 3 quality gate: `docs/phase3_quality_gate.md`
@@ -154,7 +157,9 @@ llm-streaming-semantics-audit/
 |   |   |-- aws_bedrock_converse_benign_pilot.md
 |   |   |-- benign_lifecycle_comparison.md
 |   |   |-- openai_responses_benign_pilot.md
-|   |   `-- p3_stratified_safety_analysis.md
+|   |   |-- p3_stratified_safety_analysis.md
+|   |   |-- xiaomi_mimo_anthropic_benign_pilot.md
+|   |   `-- xiaomi_mimo_openai_benign_pilot.md
 |   |-- source_notes/
 |   |   |-- anthropic.md
 |   |   |-- aws_bedrock.md
@@ -192,7 +197,8 @@ llm-streaming-semantics-audit/
 |   |-- semantics_taxonomy.md
 |   |-- stop_reason_probe_manifest.example.toml
 |   |-- stop_reason_probe_plan.md
-|   `-- trace_contract.md
+|   |-- trace_contract.md
+|   `-- xiaomi_mimo_sdk_config.md
 |-- scripts/
 |   |-- analyze_p3_paired.py
 |   |-- audit_p3_results.py
@@ -227,7 +233,9 @@ llm-streaming-semantics-audit/
 |       |   |-- base.py
 |       |   |-- mock.py
 |       |   |-- openai_responses.py
-|       |   `-- safety_mapping.py
+|       |   |-- safety_mapping.py
+|       |   |-- token_usage.py
+|       |   `-- xiaomi_mimo.py
 |       |-- experiments/
 |       |   |-- __init__.py
 |       |   `-- manifest.py
@@ -276,7 +284,8 @@ llm-streaming-semantics-audit/
 |   |-- test_real_benign_pilot.py
 |   |-- test_real_pilot_summary.py
 |   |-- test_trace_recorder.py
-|   `-- test_trace_validator.py
+|   |-- test_trace_validator.py
+|   `-- test_xiaomi_mimo.py
 |-- .env.example
 |-- .gitignore
 |-- AGENTS.md

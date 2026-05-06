@@ -28,6 +28,8 @@ DEFAULT_OUTPUTS = {
     "anthropic_messages": Path("docs/pilot_runs/anthropic_messages_benign_pilot.md"),
     "aws_bedrock_converse": Path("docs/pilot_runs/aws_bedrock_converse_benign_pilot.md"),
     "openai_responses": Path("docs/pilot_runs/openai_responses_benign_pilot.md"),
+    "xiaomi_mimo_anthropic": Path("docs/pilot_runs/xiaomi_mimo_anthropic_benign_pilot.md"),
+    "xiaomi_mimo_openai": Path("docs/pilot_runs/xiaomi_mimo_openai_benign_pilot.md"),
 }
 SUPPORTED_PROVIDERS = set(DEFAULT_OUTPUTS)
 MODE_ORDER = {"streaming": 0, "nonstreaming": 1}
@@ -46,6 +48,10 @@ class PilotTraceRow:
     event_count: int
     chunk_count: int
     final_response_chars: int | None
+    final_response_tokens: int | None
+    provider_input_tokens: int | None
+    provider_output_tokens: int | None
+    provider_total_tokens: int | None
     ttfb_ms: float | None
     ttft_ms: float | None
     settlement_lag_ms: float | None
@@ -156,8 +162,8 @@ def render_markdown(
         "",
         "## Latest Trace Summary",
         "",
-        "| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason | Provider stop reason |",
-        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
+        "| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | Output tokens | Total tokens | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason | Provider stop reason |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
     ]
     for row in rows:
         lines.append(
@@ -171,6 +177,8 @@ def render_markdown(
                     str(row.event_count),
                     str(row.chunk_count),
                     _format_optional_int(row.final_response_chars),
+                    _format_optional_int(row.provider_output_tokens or row.final_response_tokens),
+                    _format_optional_int(row.provider_total_tokens),
                     _format_optional_float(row.ttfb_ms),
                     _format_optional_float(row.ttft_ms),
                     _format_optional_float(row.settlement_lag_ms),
@@ -190,6 +198,8 @@ def render_markdown(
             "- `TTFT_ms` is only defined for streaming traces that emit `first_token`.",
             "- `Final chars` uses normalized character counts and does not require",
             "  retaining model text.",
+            "- `Output tokens` and `Total tokens` use provider-reported usage when",
+            "  exposed by the adapter; they are not inferred from redacted text.",
             "- `Provider stop reason` is copied from provider metadata when exposed by",
             "  the adapter; otherwise it is reported as `unknown`.",
             "- Artifacts remain under ignored local directories and are not committed.",
@@ -210,6 +220,7 @@ def _row_from_events(
     validation = validate_trace(events)
     trace_id = events[0].trace_id if events else "unknown"
     final_response_chars = _final_response_chars(events)
+    token_usage = _provider_token_usage(events)
     terminal_reason = _terminal_reason(events)
     return PilotTraceRow(
         provider=provider,
@@ -223,6 +234,10 @@ def _row_from_events(
         event_count=len(events),
         chunk_count=sum(event.event_type == EventType.CHUNK for event in events),
         final_response_chars=final_response_chars,
+        final_response_tokens=token_usage.get("final_response_tokens"),
+        provider_input_tokens=token_usage.get("provider_input_tokens"),
+        provider_output_tokens=token_usage.get("provider_output_tokens"),
+        provider_total_tokens=token_usage.get("provider_total_tokens"),
         ttfb_ms=time_to_first_byte_ms(events),
         ttft_ms=time_to_first_token_ms(events),
         settlement_lag_ms=settlement_lag_ms(events),
@@ -281,6 +296,35 @@ def _final_response_chars(events: list[StreamEvent]) -> int | None:
     return None
 
 
+def _provider_token_usage(events: list[StreamEvent]) -> dict[str, int]:
+    final_response = None
+    for event in reversed(events):
+        if event.event_type == EventType.FINAL_RESPONSE:
+            final_response = event
+            break
+    if final_response is None:
+        return {}
+    usage: dict[str, int] = {}
+    if final_response.token_count is not None:
+        usage["final_response_tokens"] = final_response.token_count
+    for key in (
+        "provider_input_tokens",
+        "provider_output_tokens",
+        "provider_total_tokens",
+    ):
+        value = final_response.metadata.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            usage[key] = value
+        elif isinstance(value, str):
+            try:
+                usage[key] = int(value)
+            except ValueError:
+                continue
+    return usage
+
+
 def _terminal_reason(events: list[StreamEvent]) -> str:
     for event in reversed(events):
         if event.terminal_reason is not None:
@@ -304,6 +348,10 @@ def _provider_title(provider: str) -> str:
         return "AWS Bedrock Converse"
     if provider == "openai_responses":
         return "OpenAI Responses"
+    if provider == "xiaomi_mimo_anthropic":
+        return "Xiaomi MiMo Anthropic-Compatible"
+    if provider == "xiaomi_mimo_openai":
+        return "Xiaomi MiMo OpenAI-Compatible"
     return provider
 
 

@@ -46,6 +46,8 @@ ALLOWED_ADAPTER_FILES = {
     "mock.py",
     "openai_responses.py",
     "safety_mapping.py",
+    "token_usage.py",
+    "xiaomi_mimo.py",
 }
 REQUIRED_DOCS = {
     "docs/benign_pilot_policy.md",
@@ -205,6 +207,7 @@ def _real_pilot_runner_guard_check(root: Path) -> GateCheck:
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
         "AWS_BEARER_TOKEN_BEDROCK",
+        "xiaomi_mimo_api_key_from_env",
     ]
     missing = [item for item in required if item not in content]
     return GateCheck(

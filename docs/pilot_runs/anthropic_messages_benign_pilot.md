@@ -21,18 +21,18 @@ exposure windows.
 
 ## Latest Trace Summary
 
-| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason | Provider stop reason |
-| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| `benign_summary` | `streaming` | `claude-haiku-4-5-20251001` | yes | 10 | 2 | 93 | 2081.134 | 2087.804 | 0.019 | `complete` | `end_turn` |
-| `benign_summary` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 93 | 1122.695 | n/a | 0.013 | `complete` | `end_turn` |
-| `long_text_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 16 | 8 | 711 | 1330.583 | 1332.683 | 0.021 | `length` | `max_tokens` |
-| `long_text_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 709 | 2214.317 | n/a | 0.010 | `length` | `max_tokens` |
-| `numbered_list_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 15 | 7 | 507 | 806.623 | 809.193 | 0.030 | `length` | `max_tokens` |
-| `numbered_list_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 518 | 1819.884 | n/a | 0.011 | `length` | `max_tokens` |
-| `short_text_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 10 | 2 | 81 | 1364.855 | 1367.794 | 0.017 | `complete` | `end_turn` |
-| `short_text_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 81 | 846.725 | n/a | 0.010 | `complete` | `end_turn` |
-| `structured_json_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 12 | 4 | 256 | 909.772 | 911.756 | 0.018 | `complete` | `end_turn` |
-| `structured_json_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 256 | 1124.111 | n/a | 0.011 | `complete` | `end_turn` |
+| Prompt | Mode | Model | Valid | Events | Chunks | Final chars | Output tokens | Total tokens | TTFB ms | TTFT ms | Settlement lag ms | Terminal reason | Provider stop reason |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `benign_summary` | `streaming` | `claude-haiku-4-5-20251001` | yes | 10 | 2 | 93 | n/a | n/a | 2081.134 | 2087.804 | 0.019 | `complete` | `end_turn` |
+| `benign_summary` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 93 | n/a | n/a | 1122.695 | n/a | 0.013 | `complete` | `end_turn` |
+| `long_text_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 16 | 8 | 711 | n/a | n/a | 1330.583 | 1332.683 | 0.021 | `length` | `max_tokens` |
+| `long_text_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 709 | n/a | n/a | 2214.317 | n/a | 0.010 | `length` | `max_tokens` |
+| `numbered_list_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 15 | 7 | 507 | n/a | n/a | 806.623 | 809.193 | 0.030 | `length` | `max_tokens` |
+| `numbered_list_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 518 | n/a | n/a | 1819.884 | n/a | 0.011 | `length` | `max_tokens` |
+| `short_text_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 10 | 2 | 81 | n/a | n/a | 1364.855 | 1367.794 | 0.017 | `complete` | `end_turn` |
+| `short_text_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 81 | n/a | n/a | 846.725 | n/a | 0.010 | `complete` | `end_turn` |
+| `structured_json_generation` | `streaming` | `claude-haiku-4-5-20251001` | yes | 12 | 4 | 256 | n/a | n/a | 909.772 | 911.756 | 0.018 | `complete` | `end_turn` |
+| `structured_json_generation` | `nonstreaming` | `claude-haiku-4-5-20251001` | yes | 6 | 0 | 256 | n/a | n/a | 1124.111 | n/a | 0.011 | `complete` | `end_turn` |
 
 ## Notes
 
@@ -40,6 +40,8 @@ exposure windows.
 - `TTFT_ms` is only defined for streaming traces that emit `first_token`.
 - `Final chars` uses normalized character counts and does not require
   retaining model text.
+- `Output tokens` and `Total tokens` use provider-reported usage when
+  exposed by the adapter; they are not inferred from redacted text.
 - `Provider stop reason` is copied from provider metadata when exposed by
   the adapter; otherwise it is reported as `unknown`.
 - Artifacts remain under ignored local directories and are not committed.

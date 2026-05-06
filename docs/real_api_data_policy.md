@@ -16,6 +16,11 @@ Bedrock API key authentication uses `AWS_BEARER_TOKEN_BEDROCK`. The repository
 may check whether this variable is configured, but must not print or persist the
 token value.
 
+Xiaomi MiMo compatible API authentication uses `XIAOMI_MIMO_API_KEY`, with
+`MIMO_API_KEY` accepted as a local compatibility fallback. The repository may
+record which environment variable name was required, but must not print or
+persist the key value.
+
 ## Prompt Scope
 
 Only prompt IDs from `src/lssa/prompts/benign_prompts.yaml` are allowed. Unsafe,

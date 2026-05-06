@@ -25,6 +25,17 @@ from lssa.adapters.aws_bedrock_converse import (
     AwsBedrockConverseClient,
 )
 from lssa.adapters.openai_responses import OpenAIResponsesAdapter, OpenAIResponsesClient
+from lssa.adapters.xiaomi_mimo import (
+    DEFAULT_XIAOMI_MIMO_MODEL,
+    XiaomiMimoAnthropicAdapter,
+    XiaomiMimoAnthropicClient,
+    XiaomiMimoOpenAIAdapter,
+    XiaomiMimoOpenAIClient,
+    xiaomi_mimo_anthropic_base_url,
+    xiaomi_mimo_api_key_from_env,
+    xiaomi_mimo_model,
+    xiaomi_mimo_openai_base_url,
+)
 from lssa.schema.events import EventType, ResponseMode, StreamEvent, TerminalReasonType
 from lssa.tracing.recorder import TraceRecorder
 from lssa.utils.aws_bedrock import (
@@ -40,11 +51,15 @@ SUPPORTED_PROVIDERS = {
     "anthropic_messages",
     "aws_bedrock_converse",
     "openai_responses",
+    "xiaomi_mimo_anthropic",
+    "xiaomi_mimo_openai",
 }
 DEFAULT_MODELS = {
     "anthropic_messages": "claude-haiku-4-5-20251001",
     "aws_bedrock_converse": "amazon.nova-micro-v1:0",
     "openai_responses": "gpt-4.1-mini",
+    "xiaomi_mimo_anthropic": DEFAULT_XIAOMI_MIMO_MODEL,
+    "xiaomi_mimo_openai": DEFAULT_XIAOMI_MIMO_MODEL,
 }
 
 
@@ -123,6 +138,28 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         return _run_bedrock_network_pilot(args, prompts[args.prompt_id], modes)
+    if args.provider == "xiaomi_mimo_openai":
+        api_key, api_key_env = xiaomi_mimo_api_key_from_env()
+        if not api_key:
+            print(f"{api_key_env} is required but was not printed", file=sys.stderr)
+            return 2
+        return _run_xiaomi_mimo_openai_network_pilot(
+            args,
+            prompts[args.prompt_id],
+            modes,
+            api_key,
+        )
+    if args.provider == "xiaomi_mimo_anthropic":
+        api_key, api_key_env = xiaomi_mimo_api_key_from_env()
+        if not api_key:
+            print(f"{api_key_env} is required but was not printed", file=sys.stderr)
+            return 2
+        return _run_xiaomi_mimo_anthropic_network_pilot(
+            args,
+            prompts[args.prompt_id],
+            modes,
+            api_key,
+        )
 
     print(f"unsupported provider: {args.provider}", file=sys.stderr)
     return 2
@@ -333,6 +370,120 @@ def _run_bedrock_network_pilot(
     return 1 if failures else 0
 
 
+def _run_xiaomi_mimo_openai_network_pilot(
+    args: argparse.Namespace,
+    prompt: BenignPrompt,
+    modes: list[str],
+    api_key: str,
+) -> int:
+    client = XiaomiMimoOpenAIClient(
+        api_key=api_key,
+        base_url=xiaomi_mimo_openai_base_url(),
+        timeout_seconds=args.timeout_seconds,
+        temperature=args.temperature,
+    )
+    adapter = XiaomiMimoOpenAIAdapter(client=client)
+    return _run_adapter_network_pilot(
+        args,
+        prompt,
+        modes,
+        adapter=adapter,
+        provider_name="xiaomi_mimo_openai",
+        trace_prefix="xiaomi-mimo-openai",
+        pilot_name="xiaomi_mimo_openai_benign",
+    )
+
+
+def _run_xiaomi_mimo_anthropic_network_pilot(
+    args: argparse.Namespace,
+    prompt: BenignPrompt,
+    modes: list[str],
+    api_key: str,
+) -> int:
+    client = XiaomiMimoAnthropicClient(
+        api_key=api_key,
+        base_url=xiaomi_mimo_anthropic_base_url(),
+        timeout_seconds=args.timeout_seconds,
+        temperature=args.temperature,
+    )
+    adapter = XiaomiMimoAnthropicAdapter(client=client)
+    return _run_adapter_network_pilot(
+        args,
+        prompt,
+        modes,
+        adapter=adapter,
+        provider_name="xiaomi_mimo_anthropic",
+        trace_prefix="xiaomi-mimo-anthropic",
+        pilot_name="xiaomi_mimo_anthropic_benign",
+    )
+
+
+def _run_adapter_network_pilot(
+    args: argparse.Namespace,
+    prompt: BenignPrompt,
+    modes: list[str],
+    *,
+    adapter,
+    provider_name: str,
+    trace_prefix: str,
+    pilot_name: str,
+) -> int:
+    failures = 0
+    for mode_name in modes:
+        response_mode = _response_mode(mode_name)
+        request = AdapterRequest(
+            trace_id=f"{trace_prefix}-{mode_name}-{uuid4().hex}",
+            prompt_id=prompt.prompt_id,
+            prompt=prompt.text,
+            response_mode=response_mode,
+            model=_model_for_provider(args),
+            provider_family=adapter.provider_family,
+            api_surface=adapter.api_surface,
+            max_output_tokens=args.max_output_tokens,
+            metadata={
+                "pilot": pilot_name,
+                "mode": mode_name,
+            },
+        )
+        try:
+            events = list(adapter.run(request))
+        except Exception as exc:  # noqa: BLE001 - CLI must suppress provider tracebacks.
+            print(
+                f"provider={provider_name} mode={mode_name} status=error "
+                f"error_type={type(exc).__name__}",
+                file=sys.stderr,
+            )
+            failures += 1
+            continue
+
+        validation = validate_trace(events)
+        recorder = TraceRecorder(
+            trace_id=request.trace_id,
+            provider_family=adapter.provider_family,
+            api_surface=adapter.api_surface,
+            model=request.model,
+            response_mode=response_mode,
+        )
+        recorder.extend(events)
+        run_dir = args.output_dir / provider_name / request.prompt_id / mode_name
+        trace_path = recorder.write_jsonl(
+            run_dir / f"{request.trace_id}.jsonl",
+            redact_content=True,
+        )
+        summary_path = recorder.write_summary_json(
+            run_dir / f"{request.trace_id}.summary.json",
+            redact_content=True,
+        )
+        status = _pilot_status(events, validation.ok)
+        if status != "ok":
+            failures += 1
+        print(
+            f"provider={provider_name} mode={mode_name} status={status} "
+            f"events={len(events)} trace={trace_path} summary={summary_path}"
+        )
+    return 1 if failures else 0
+
+
 def load_benign_prompts(path: Path = PROMPTS_PATH) -> dict[str, BenignPrompt]:
     prompts: dict[str, BenignPrompt] = {}
     current: dict[str, str] | None = None
@@ -415,6 +566,8 @@ def _pilot_status(events: list[StreamEvent], validation_ok: bool) -> str:
 def _model_for_provider(args: argparse.Namespace) -> str:
     if args.model:
         return args.model
+    if args.provider in {"xiaomi_mimo_anthropic", "xiaomi_mimo_openai"}:
+        return xiaomi_mimo_model()
     return DEFAULT_MODELS[args.provider]
 
 

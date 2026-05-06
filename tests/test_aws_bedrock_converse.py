@@ -156,7 +156,7 @@ def test_bedrock_streaming_mapping_from_fake_events() -> None:
             },
             {"contentBlockStop": {"contentBlockIndex": 0}},
             {"messageStop": {"stopReason": "end_turn"}},
-            {"metadata": {"usage": {"outputTokens": 2}}},
+            {"metadata": {"usage": {"inputTokens": 6, "outputTokens": 2, "totalTokens": 8}}},
         ],
     )
 
@@ -167,6 +167,11 @@ def test_bedrock_streaming_mapping_from_fake_events() -> None:
         event.metadata.get("raw_event_type") == "contentBlockDelta"
         for event in events
     )
+    final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
+    assert final_response.token_count == 2
+    assert final_response.metadata["provider_input_tokens"] == 6
+    assert final_response.metadata["provider_output_tokens"] == 2
+    assert final_response.metadata["provider_total_tokens"] == 8
 
 
 def test_bedrock_streaming_error_mapping_is_terminal() -> None:
@@ -213,6 +218,7 @@ def test_bedrock_nonstreaming_mapping_from_fake_response() -> None:
                 }
             },
             "stopReason": "end_turn",
+            "usage": {"inputTokens": 9, "outputTokens": 6, "totalTokens": 15},
         },
     )
 
@@ -226,6 +232,9 @@ def test_bedrock_nonstreaming_mapping_from_fake_response() -> None:
         EventType.SETTLED,
     ]
     assert events[-1].terminal_reason == TerminalReasonType.COMPLETE
+    final_response = next(event for event in events if event.event_type == EventType.FINAL_RESPONSE)
+    assert final_response.token_count == 6
+    assert final_response.metadata["provider_total_tokens"] == 15
 
 
 def test_bedrock_content_filtered_maps_to_content_filter_terminal_reason() -> None:
